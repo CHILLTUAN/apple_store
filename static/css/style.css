@@ -1,0 +1,310 @@
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit; /*Kế thừa màu chữ từ phần tử cha*/
+  text-decoration: none; /*Bỏ gạch chân của thẻ <a>*/
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    sans-serif;
+  /*
+  -apple-system, BlinkMacSystemFont: ưu tiên font hệ thống trên các thiết bị Apple và môi trường hỗ trợ.
+
+  "SF Pro Display", "SF Pro Text": tên font SF Pro nếu máy đã cài và trình duyệt có thể truy cập.
+
+  sans-serif: font dự phòng nếu những font trước không có.
+  */
+  /*min-height: 100vh;*/
+
+  background-color: #ffffff;
+
+  margin: 0;
+
+  min-height: 100vh; /*body cao ít nhất bằng chiều cao màn hình*/
+  display: flex;
+  flex-direction: column;
+}
+
+.site-header {
+  width: 100%; /*Chiều rộng bằng phần tử cha*/
+  height: 60px;
+
+  background-color: #1d1d1f;
+
+  display: flex;
+  flex-direction: row;
+  /*justify-content: center;*/
+  align-items: center;
+}
+
+.navbar {
+  width: 100%;
+  padding: 0 24px;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+
+  margin: 0;
+}
+
+.brand-logo {
+  width: 21.06px;
+  height: 25.81px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 32px;
+
+  font-size: 14px;
+  color: #f5f5f7;
+
+  /* margin-left: auto; auto sẽ lấy phần không trống giữa logo và menu để đẩy menu về bên phải*/
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  flex-shrink: 0; /*Để nhóm nút không bị ép nhỏ lại khi thiếu không gian.*/
+}
+
+#search-open {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+
+  background-color: #f5f5f7;
+  border: 0;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+
+  cursor: pointer;
+}
+
+.search-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.shopping-cart {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+
+  background-color: #f5f5f7;
+  border: 0;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+
+  /* margin-left: 16px; */
+}
+
+.shopping-cart-icon {
+  width: 18px;
+  height: 18px;
+}
+
+#menu-open {
+  display: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+
+  background-color: #f5f5f7;
+  border: none;
+
+  font-size: 20px;
+  color: #1d1d1f;
+
+  cursor: pointer;
+
+  flex-shrink: 0;
+}
+
+.menu-open-icon {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  #menu-open {
+    display: block;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-actions {
+    margin-left: auto;
+  }
+}
+
+.login-link {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+
+  background-color: #f5f5f7;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+
+  /* margin-left: 16px; */
+}
+
+.user-icon {
+  width: 18px;
+  height: 18px;
+}
+
+main {
+  flex: 1; /*Cho phép main chiếm phần không gian còn trống, đẩy footer xuống dưới*/
+}
+
+.site-footer {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-top-divider {
+  width: calc(100% - 48px);
+  border: 1px solid #d2d2d7;
+}
+
+.site-footer nav {
+  display: flex;
+
+  flex-wrap: wrap; /*Cho phép cột xuống hàng khi không đủ chỗ*/
+
+  gap: 32px 64px; /*khoảng cách giữa các hàng là 32px, giữa các cột là 64px.*/
+
+  margin: 0 24px;
+}
+
+.shopping-and-exploration,
+.account,
+.apple-store {
+  display: flex;
+  flex-direction: column;
+
+  gap: 12px;
+}
+
+.shopping-and-exploration p,
+.account p,
+.apple-store p {
+  font-size: 14px;
+  font-weight: 500;
+  color: #000000;
+}
+
+.shopping-and-exploration a,
+.account a,
+.apple-store a {
+  font-size: 13px;
+  color: #000000;
+}
+
+.footer-bottom-divider {
+  width: calc(100% - 48px);
+  height: 0px;
+  border: 1px solid #d2d2d7;
+}
+
+.search-overlay {
+  position: fixed; /* fixed giúp overlay bám theo màn hình thay vì nằm như một phần tử bình thường trong trang.*/
+  /* inset: 0; */
+  top: 60px;
+  right: 0px;
+  bottom: 0px;
+  left: 0px;
+  /* Khi kết hợp với position: fixed, overlay sẽ kéo dài từ cạnh trên đến cạnh dưới, từ trái sang phải của viewport. */
+  z-index: 1000;
+  /*Nó điều khiển thứ tự xếp chồng của các phần tử — hiểu đơn giản là phần tử nào nằm phía trước.*/
+  /*1000 không phải con số thần kỳ. Nó chỉ cần lớn hơn các phần tử cạnh tranh trong cùng ngữ cảnh xếp chồng phù hợp.*/
+
+  background-color: rgba(245, 245, 247, 0.5);
+  /*tạo hiệu ứng kính mờ bằng cách làm mờ nội dung nằm phía sau overlay.*/
+  backdrop-filter: blur(5px); /*là cú pháp tiêu chuẩn.*/
+  -webkit-backdrop-filter: blur(
+    5px
+  ); /*là tiền tố tương thích với một số trình duyệt WebKit*/
+  /* 12px là bán kính làm mờ: số càng lớn thì hiệu ứng thường càng mạnh. */
+
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.search-overlay[hidden] {
+  display: none;
+}
+
+.search-form {
+  width: 100%; /* fit-content; chiều rộng của form co lại theo kích thước nội dung */
+  /* max-width: 680px;  */
+  height: 100px;
+  background-color: #1d1d1f;
+
+  color: #f5f5f7;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+
+#search-input {
+  width: 500px;
+  height: 25px;
+}
+
+.search-input-icon {
+  width: 18px;
+  height: 18px;
+}
+
+#search-close {
+  background: none;
+  border: none;
+}
+
+.search-close-icon {
+  width: 18px;
+  height: 18px;
+}
