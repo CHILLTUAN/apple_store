@@ -3,18 +3,51 @@
 {%block title%}Đăng nhập| {{ store_name }}{%endblock%}
 
 {%block content%}
-  <div class="login-container">
-    <h2>Đăng nhập</h2>
-    <form method="POST" action="{{ url_for('login') }}">
-      <div class="form-group">
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" required />
+  <div class="login-border">
+    
+    <div class="Avatar">
+      <div class="head"></div>
+      <div class="body"></div>  
+    </div>
+
+    <label class="login">ĐĂNG NHẬP</label>
+
+    <div class="username">
+      <label for="username">Tên đăng nhập</label>
+      <input
+          type="text"
+          id = "username_id"
+          placeholder="Tên đăng nhập ">
+    </div>
+
+    <div class="password">
+      <label for="password">Mật khẩu</label>
+      <input
+          type="text"
+          id = "password_id"
+          placeholder="Mật khẩu">
+    </div>
+
+    <div class="option">
+      <div class="remember-me-group">
+        <input type="checkbox" id="rememberme_id" name="remember-me" />
+        <label for="remember-me">Ghi nhớ mật khẩu</label>
       </div>
-      <div class="form-group">
-        <label for="password">Mật khẩu:</label>
-        <input type="password" id="password" name="password" required />
+
+      <div class="forgot-passwork-group">
+        <a href="#">Quên mật khẩu?</a>
       </div>
-      <button type="submit">Đăng nhập</button>
-    </form>
+    </div>
+
+    <div class="button">
+        <button class="login_button" type="submit" >Đăng nhập</button>
+    </div>
+
+    <div class="login-option">
+      <p> Bạn chưa có tài khoản? <p>
+      
+      <a href="#">Đăng kí</a>
+    </div>
+
   </div>
 {%endblock%}

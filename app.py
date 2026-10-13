@@ -5,7 +5,7 @@ app = Flask(__name__)
 @app.route("/")
 def home():
     return render_template(
-        "home/index.html",
+        "auth/login.html",
         store_name="Apple Store",
         message="Flask đã kết nối với HTML thành công!"
     )
