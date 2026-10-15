@@ -1,53 +1,69 @@
-{%extends "base.html"%}
 
-{%block title%}Đăng nhập| {{ store_name }}{%endblock%}
+{% extends "base.html" %}
 
-{%block content%}
-  <div class="login-border">
-    
+{% block title %}Đăng nhập | {{ store_name }}{% endblock %}
+
+{% block content %}
+<div class="login-border">
+
     <div class="Avatar">
-      <div class="head"></div>
-      <div class="body"></div>  
+        <div class="head"></div>
+        <div class="body"></div>
     </div>
 
-    <label class="login">ĐĂNG NHẬP</label>
+    <h1 class="login">ĐĂNG NHẬP</h1>
 
-    <div class="username">
-      <label for="username">Tên đăng nhập</label>
-      <input
-          type="text"
-          id = "username_id"
-          placeholder="Tên đăng nhập ">
-    </div>
+    <form action="{{ url_for('login') }}">
 
-    <div class="password">
-      <label for="password">Mật khẩu</label>
-      <input
-          type="text"
-          id = "password_id"
-          placeholder="Mật khẩu">
-    </div>
+        <div class="username">
+            <label for="username_id">Tên đăng nhập</label>
+            <input
+                type="text"
+                id="username_id"
+                name="username"
+                placeholder="Tên đăng nhập"
+                required
+            >
+        </div>
 
-    <div class="option">
-      <div class="remember-me-group">
-        <input type="checkbox" id="rememberme_id" name="remember-me" />
-        <label for="remember-me">Ghi nhớ mật khẩu</label>
-      </div>
+        <div class="password">
+            <label for="password_id">Mật khẩu</label>
+            <input
+                type="password"
+                id="password_id"
+                name="password"
+                placeholder="Mật khẩu"
+                required
+            >
+        </div>
 
-      <div class="forgot-passwork-group">
-        <a href="#">Quên mật khẩu?</a>
-      </div>
-    </div>
+        <div class="option">
+            <div class="remember-me-group">
+                <input
+                    type="checkbox"
+                    id="rememberme_id"
+                    name="remember_me"
+                >
+                <label for="rememberme_id">Ghi nhớ đăng nhập</label>
+            </div>
 
-    <div class="button">
-        <button class="login_button" type="submit" >Đăng nhập</button>
-    </div>
+            <div class="forgot-passwork-group">
+                <a href="#">Quên mật khẩu?</a>
+            </div>
+        </div>
+
+        <div class="button">
+            <button class="login_button" type="submit">
+                Đăng nhập
+            </button>
+        </div>
+
+    </form>
 
     <div class="login-option">
-      <p> Bạn chưa có tài khoản? <p>
-      
-      <a href="#">Đăng kí</a>
+        <p>Bạn chưa có tài khoản?<p>
+        <a href="{{ url_for('register') }}">Đăng ký ngay.</a>
     </div>
 
-  </div>
-{%endblock%}
+</div>
+{% endblock %}

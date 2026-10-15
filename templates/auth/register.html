@@ -1,0 +1,79 @@
+{%extends "base.html"%}
+
+{%block title%}Đăng ký| {{ store_name }}{%endblock%}
+
+{%block content%}
+    <div class="register-border">
+
+
+        <h1 class="register">ĐĂNG KÝ</h1>
+
+        <form action="{{ url_for('register') }}">
+        
+            <div class="fullname">
+                <label for="fullname">Họ và tên</label>
+                <input
+                    type="text"
+                    id = "fullname_id"
+                    placeholder="Họ và tên">
+            </div>
+
+            <div class="phonenumber">
+                <label for="phone">Số điện thoại</label>
+                <input
+                    type="text"
+                    id = "phone_id"
+                    placeholder="Số điện thoại">
+            </div>
+
+            <div class="Email">
+                <label for="mail">Email</label>
+                <input
+                    type="text"
+                    id = "mail"
+                    placeholder="Email">
+            </div>
+
+            <div class="address">
+                <label for="address">Địa chỉ</label>
+                <input
+                    type="text"
+                    id = "address_id"
+                    placeholder="Địa chỉ">
+            </div>
+
+            <div class="username">
+                <label for="username">Tên đăng nhập</label>
+                <input
+                    type="text"
+                    id = "username_id"
+                    placeholder="Tên đăng nhập">
+            </div>
+
+            <div class="password">
+                <label for="password">Mật khẩu</label>
+                <input
+                type="text"
+                id = "password_id"
+                placeholder="Mật khẩu">
+                <input
+                type="text"
+                id = "confirm_password_id"
+                placeholder="Xác nhận mật khẩu">
+            </div>
+
+            <div class="button">
+            <button class="register_button" type="submit">
+                Đăng ký
+            </button>
+        </div>
+
+        </form>
+
+        <div class="login-option">
+            <p>Bạn đã có tài khoản?<p>
+            <a href="{{ url_for('login') }}">Đăng nhập</a>
+        </div>
+
+    </div>
+{%endblock%}

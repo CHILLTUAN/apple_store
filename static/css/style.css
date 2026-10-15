@@ -450,9 +450,157 @@ CSS for the login page
     width: 350px; 
     margin-top: 10px;
     margin-bottom: 20px;
-    text-decoration: none; 
     font-size: 14px;
     cursor: pointer; 
     display: flex;
     justify-content: center;
+    gap: 5px;
+    color: #060606;
   }
+  .login-option a {
+  text-decoration: none;
+  cursor: pointer;
+  }
+
+
+  .login-option a:hover {
+    text-decoration: underline;
+  }
+
+
+  /* CSS for register page */
+
+  .register-border {
+    margin-bottom: 50px;
+    display: block; 
+  }
+    .register {
+      font-size: 32px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 50px;
+      display: block; 
+    }
+
+    .fullname label {
+      font-weight: bold;
+      font-size: 14pt;
+    }
+    .fullname input{
+      display: flex;
+      width: 400px;
+      background-color: #F5F5F7;
+  ;
+      border: 1px solid #060606;
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 10px; 
+      color: #060606;
+      font-size: 14px;
+    }
+    
+    .phonenumber label {
+      font-weight: bold;
+      font-size: 14pt;
+    }
+    .phonenumber input {
+      display: flex;
+      width: 400px;
+      background-color: #F5F5F7;
+  ;
+      border: 1px solid #060606;
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 10px; 
+      color: #060606;
+      font-size: 14px;
+    }
+
+    .Email label {
+      font-weight: bold;
+      font-size: 14pt;
+    }
+    .Email input {
+      display: flex;
+      width: 400px;
+      background-color: #F5F5F7;
+  ;
+      border: 1px solid #060606;
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 10px; 
+      color: #060606;
+      font-size: 14px;
+    }
+
+    .address label {
+      font-weight: bold;
+      font-size: 14pt;
+    }
+    .address input {
+      display: flex;
+      width: 400px;
+      background-color: #F5F5F7;
+  ;
+      border: 1px solid #060606;
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 10px; 
+      color: #060606;
+      font-size: 14px;
+    }
+
+    .username label {
+      font-weight: bold;
+      font-size: 14pt;
+    }
+    .username input {
+      ddisplay: flex;
+      width: 400px;
+      background-color: #F5F5F7;
+  ;
+      border: 1px solid #060606;
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 10px; 
+      color: #060606;
+      font-size: 14px;
+    }
+
+    .password label {
+      font-weight: bold;
+      font-size: 14pt;
+    }
+    .password input {
+      display: flex;
+      width: 400px;
+      background-color: #F5F5F7;
+  ;
+      border: 1px solid #060606;
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 10px; 
+      color: #060606;
+      font-size: 14px;
+    }
+
+    .button {
+      width: 400px; 
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .register_button {
+      width: 400px; 
+      background-color: #f0f0f0;
+      border: 2px solid #060606;
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer; 
+      margin-top: 20px;
+    }
+    .register_button:hover {
+      background-color: #060606;
+      color: #f0f0f0; 
+    }
