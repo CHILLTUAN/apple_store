@@ -246,7 +246,10 @@ main {
 }
 
 .search-overlay {
-  position: fixed; /* fixed giúp overlay bám theo màn hình thay vì nằm như một phần tử bình thường trong trang.*/
+  position: fixed;
+  /* fixed giúp overlay bám theo màn hình thay vì nằm như một phần tử bình thường trong trang.*/
+  /* không phụ thuộc vị trí của nó trong luồng nội dung thông thường. */
+
   /* inset: 0; */
   top: 60px;
   right: 0px;
@@ -287,11 +290,23 @@ main {
   flex-direction: row;
   justify-content: center;
   align-items: center;
+
+  gap: 8px;
 }
 
 #search-input {
-  width: 500px;
-  height: 25px;
+  width: 600px;
+  height: 30px;
+
+  border-radius: 8px;
+
+  background: #f5f5f7;
+
+  border: none;
+}
+
+#search-input:focus {
+  outline: none;
 }
 
 .search-input-icon {
@@ -307,4 +322,62 @@ main {
 .search-close-icon {
   width: 18px;
   height: 18px;
+}
+
+#menu-overlay[hidden] {
+  display: none;
+}
+
+#menu-overlay {
+  padding: 24px 24px 24px 24px;
+
+  background-color: #f5f5f7;
+
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  bottom: 0px;
+  right: 0px;
+
+  overflow-y: auto;
+  /* nếu nội dung menu cao hơn vùng hiển thị, menu sẽ có thể cuộn theo chiều dọc. */
+  -webkit-overflow-scrolling: touch;
+  /*
+  Trên Safari iOS, giá trị touch cho phép vùng cuộn có hiệu ứng quán tính, tức là, khi vuốt lên rồi thả tay ra, nội dung vẫn tiếp tục trượt một đoạn trước khi dừng lại, giống cách cuộn tự nhiên trên điện thoại.
+  */
+
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 32px;
+  font-size: 14px;
+}
+
+#menu-close {
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+
+  cursor: pointer;
+
+  padding: 0;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.menu-close-icon {
+  width: 18px;
+  height: 18px;
+
+  /*tránh khoảng trống do cách SVG hoặc ảnh inline được căn theo dòng chữ.*/
+}
+
+body.search-open {
+  overflow: hidden;
+}
+
+body.menu-open {
+  overflow: hidden;
 }

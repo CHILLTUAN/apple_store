@@ -10,5 +10,6 @@ def home():
         message="Flask đã kết nối với HTML thành công!"
     )
 
+
 if __name__ == "__main__":
     app.run(debug=True)

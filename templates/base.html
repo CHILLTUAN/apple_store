@@ -17,6 +17,7 @@
   </head>
 
   <body>
+    <!--HEADER-->
     <header class="site-header">
       <nav class="navbar" aria-label="Điều hướng chính">
         <!-- aria-label: Tên mô tả cho trình đọc màn hình -->
@@ -55,6 +56,7 @@
             />
           </button>
           <!--aria-controls: Cho biết button controls element nào-->
+          <!--aria-expanded: Báo trạng thái mở/đóng-->
 
           <a href="#" class="shopping-cart"
             ><img
@@ -67,6 +69,7 @@
             type="button"
             id="menu-open"
             aria-label="menu điều hướng"
+            aria-controls="menu-overlay"
             aria-expanded="false"
           >
             <img
@@ -74,7 +77,6 @@
               alt=""
               class="menu-open-icon"
             />
-            <!--aria-expanded: Báo trạng thái mở/đóng-->
           </button>
 
           <a href="#" class="login-link"
@@ -87,6 +89,9 @@
       </nav>
     </header>
 
+    <!--==================================================-->
+
+    <!--SEARCH OVERLAY-->
     <div id="search-overlay" class="search-overlay" hidden>
       <!--hidden: Ẩn phần tử cho đến khi JavaScript bỏ thuộc tính này -->
       <form action="" class="search-form" role="search">
@@ -102,10 +107,10 @@
           type="search"
           id="search-input"
           name="q"
-          placeholder="Mày tìm cái dái drg rgrthrtyve5btgì?"
+          placeholder="Tìm kiếm"
         />
 
-        <button type="submit">Tìm</button>
+        <button type="submit" id="search-confirm" hidden>Tìm</button>
 
         <button type="button" id="search-close">
           <img
@@ -117,8 +122,31 @@
       </form>
     </div>
 
+    <!--MENU OVERLAY-->
+    <div id="menu-overlay" class="menu-overlay" hidden>
+      <a href="#">Cửa hàng</a>
+      <a href="#">Mac</a>
+      <a href="#">iPad</a>
+      <a href="#">iPhone</a>
+      <a href="#">Watch</a>
+      <a href="#">AirPods</a>
+      <a href="#">Phụ kiện</a>
+
+      <button type="button" id="menu-close">
+        <img
+          src="{{ url_for('static', filename='images/icons/exit.png') }}"
+          alt=""
+          class="menu-close-icon"
+        />
+      </button>
+    </div>
+
+    <!--==================================================-->
+
     <!--MAIN-->
     <main class="main-content">{% block content %}{% endblock %}</main>
+
+    <!--==================================================-->
 
     <!--FOOTER-->
     <footer class="site-footer">
