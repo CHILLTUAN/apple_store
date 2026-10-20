@@ -1,0 +1,59 @@
+/*
+* box-shadow: <offset-x> <offset-y> <blur-radius> <spread-radius> <color>;
+  * offset-x: Độ lệch bóng theo chiều ngang; số âm bên trái; số dương bên phải.
+  * offset-y: Độ lệch bóng theo chiều dọc; số âm lên trên; số dương xuống dưới.
+  * blur-radius: Độ mờ của bóng; giá trị càng lớn, bóng càng mềm và lan rộng.
+
+* transition: <property> <duration timing-function>
+*/
+
+main {
+  flex: 1;
+  /*Cho phép main chiếm phần không gian còn trống, đẩy footer xuống dưới*/
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px 32px 24px;
+}
+
+/* CSS for home/index.html*/
+.categories {
+  /* background-color: red; */
+  margin: 0;
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px 32px;
+}
+
+.categories a {
+  background-color: #f5f5f7;
+  /* // box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);*/
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+  border-radius: 16px;
+  height: 220px;
+  width: 180px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20px;
+
+  font-weight: 600;
+}
+
+.categories a:hover {
+  background-color: #ebebf0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  transform: translate(0, -3px);
+}
+
+.categories-image {
+  width: 180px;
+  height: 180px;
+}

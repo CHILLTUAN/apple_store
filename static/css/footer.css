@@ -1,0 +1,50 @@
+.site-footer {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-top-divider {
+  width: calc(100% - 48px);
+  border: 1px solid #d2d2d7;
+}
+
+.site-footer nav {
+  margin: 0 24px;
+  /*margin: 0 24px 0 24px;*/
+
+  display: flex;
+
+  flex-wrap: wrap; /*Cho phép cột xuống hàng khi không đủ chỗ*/
+
+  gap: 32px 64px; /*khoảng cách giữa các hàng là 32px, giữa các cột là 64px.*/
+}
+
+.shopping-and-exploration,
+.account,
+.apple-store {
+  display: flex;
+  flex-direction: column;
+
+  gap: 12px;
+}
+
+.shopping-and-exploration p,
+.account p,
+.apple-store p {
+  font-size: 14px;
+  font-weight: 500;
+  color: #000000;
+}
+
+.shopping-and-exploration a,
+.account a,
+.apple-store a {
+  font-size: 13px;
+  color: #000000;
+}
+
+.footer-bottom-divider {
+  width: calc(100% - 48px);
+  height: 0px;
+  border: 1px solid #d2d2d7;
+}
