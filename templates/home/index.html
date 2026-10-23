@@ -2,54 +2,37 @@
 endblock %} {% block content %}
 
 <div class="categories">
-  <a href="#"
-    ><img
-      src="{{ url_for('static', filename='images/categories/mac.png') }}"
-      alt="Mac"
-      class="categories-image"
-    />
-    Mac</a
+  {% for category in categories %}
+  <a href="{{ url_for('category_page', category_slug=category.slug) }}"
+    ><img src="{{ url_for('static', filename=category.image_url) }}" alt="" />
+    {{ category.category_name }}</a
   >
-  <a href="#"
-    ><img
-      src="{{ url_for('static', filename='images/categories/ipad.png') }}"
-      alt="iPad"
-      class="categories-image"
-    />
-    iPad</a
-  >
-  <a href="#"
-    ><img
-      src="{{ url_for('static', filename='images/categories/iphone.png') }}"
-      alt="iPhone"
-      class="categories-image"
-    />
-    iPhone</a
-  >
-  <a href="#"
-    ><img
-      src="{{ url_for('static', filename='images/categories/watch.png') }}"
-      alt="Watch"
-      class="categories-image"
-    />
-    Watch</a
-  >
-  <a href="#"
-    ><img
-      src="{{ url_for('static', filename='images/categories/airpods.png') }}"
-      alt="Airpods"
-      class="categories-image"
-    />
-    Airpods</a
-  >
-  <a href="#"
-    ><img
-      src="{{ url_for('static', filename='images/categories/phu_kien.png') }}"
-      alt="Accessories"
-      class="categories-image"
-    />
-    Phụ kiện</a
-  >
+  {% endfor %}
 </div>
 
+<section class="products-section">
+  {% for category_name, products in products_by_category.items() %}
+  <div class="product-category">
+    <div class="category-name">
+      <img
+        src="{{ url_for('static', filename='images/logo/apple_black.svg') }}"
+        alt="black apple logo"
+      />
+      <h2>{{ category_name }}</h2>
+    </div>
+
+    <div class="product-grid">
+      {% for product in products %}
+      <a href="#" class="product-card">
+        <img src="{{ url_for('static', filename=product.image_url) }}" alt="" />
+
+        <p>{{ product.product_name }}</p>
+
+        <p>{{ product.price | vnd }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</section>
 {% endblock %}

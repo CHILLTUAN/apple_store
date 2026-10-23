@@ -52,13 +52,11 @@
         /></a>
 
         <div class="nav-links">
-          <a href="#">Cửa hàng</a>
-          <a href="#">Mac</a>
-          <a href="#">iPad</a>
-          <a href="#">iPhone</a>
-          <a href="#">Watch</a>
-          <a href="#">AirPods</a>
-          <a href="#">Phụ kiện</a>
+          {% for category in categories %}
+          <a href="{{ url_for('category_page', category_slug=category.slug) }}">
+            {{ category.category_name }}
+          </a>
+          {% endfor %}
         </div>
 
         <div class="nav-actions">
@@ -144,13 +142,11 @@
 
     <!--MENU OVERLAY-->
     <div id="menu-overlay" class="menu-overlay" hidden>
-      <a href="#">Cửa hàng</a>
-      <a href="#">Mac</a>
-      <a href="#">iPad</a>
-      <a href="#">iPhone</a>
-      <a href="#">Watch</a>
-      <a href="#">AirPods</a>
-      <a href="#">Phụ kiện</a>
+      {% for category in categories %}
+      <a href="{{ url_for('category_page', category_slug=category.slug) }}">
+        {{ category.category_name }}
+      </a>
+      {% endfor %}
 
       <button type="button" id="menu-close">
         <img
@@ -175,13 +171,12 @@
       <nav aria-label="Điều hướng cuối trang">
         <div class="shopping-and-exploration">
           <p>Mua sắm và tìm hiểu</p>
-          <a href="#">Cửa hàng</a>
-          <a href="#">Mac</a>
-          <a href="#">iPad</a>
-          <a href="#">iPhone</a>
-          <a href="#">Watch</a>
-          <a href="#">AirPods</a>
-          <a href="#">Phụ kiện</a>
+
+          {% for category in categories %}
+          <a href="{{ url_for('category_page', category_slug=category.slug) }}">
+            {{ category.category_name }}
+          </a>
+          {% endfor %}
         </div>
 
         <div class="account">

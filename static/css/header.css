@@ -159,18 +159,28 @@
 }
 
 .search-overlay {
+  opacity: 1;
   background-color: rgba(245, 245, 247, 0.5);
-  /*tạo hiệu ứng kính mờ bằng cách làm mờ nội dung nằm phía sau overlay.*/
-  backdrop-filter: blur(5px); /*là cú pháp tiêu chuẩn.*/
-  -webkit-backdrop-filter: blur(
-    5px
-  ); /*là tiền tố tương thích với một số trình duyệt WebKit*/
-  /* 12px là bán kính làm mờ: số càng lớn thì hiệu ứng thường càng mạnh. */
+  /*
+  * Tạo hiệu ứng kính mờ bằng cách làm mờ nội dung nằm phía sau overlay.
+  */
+  backdrop-filter: blur(5px);
+  /* *Là cú pháp tiêu chuẩn. */
+  -webkit-backdrop-filter: blur(12px);
+  /*
+  * Là tiền tố tương thích với một số trình duyệt WebKit
+  * 12px: bán kính làm mờ, số càng lớn thì hiệu ứng thường càng mạnh. 
+  */
+  border: none;
   position: fixed;
   inset: 60px 0 0 0;
-  /* Khi kết hợp với position: fixed, overlay sẽ kéo dài từ cạnh trên đến cạnh dưới, từ trái sang phải của viewport. */
+  /* 
+  * Khi kết hợp với position: fixed, overlay sẽ kéo dài từ cạnh trên đến cạnh dưới, từ trái sang phải của viewport. 
+  */
   z-index: 1000;
-  /*Nó điều khiển thứ tự xếp chồng của các phần tử — hiểu đơn giản là phần tử nào nằm phía trước.*/
+  /*
+  * Nó điều khiển thứ tự xếp chồng của các phần tử — hiểu đơn giản là phần tử nào nằm phía trước.
+  */
 
   display: flex;
   flex-direction: column;
@@ -232,10 +242,12 @@
   inset: 0;
 
   overflow-y: auto;
-  /* nếu nội dung menu cao hơn vùng hiển thị, menu sẽ có thể cuộn theo chiều dọc. */
+  /* 
+  * Nếu nội dung menu cao hơn vùng hiển thị, menu sẽ có thể cuộn theo chiều dọc. 
+  */
   -webkit-overflow-scrolling: touch;
   /*
-  Trên Safari iOS, giá trị touch cho phép vùng cuộn có hiệu ứng quán tính, tức là, khi vuốt lên rồi thả tay ra, nội dung vẫn tiếp tục trượt một đoạn trước khi dừng lại, giống cách cuộn tự nhiên trên điện thoại.
+  *Trên Safari iOS, giá trị touch cho phép vùng cuộn có hiệu ứng quán tính, tức là, khi vuốt lên rồi thả tay ra, nội dung vẫn tiếp tục trượt một đoạn trước khi dừng lại, giống cách cuộn tự nhiên trên điện thoại.
   */
 
   display: flex;
@@ -270,4 +282,22 @@ body.search-open {
 
 body.menu-open {
   overflow: hidden;
+}
+
+/*
+* Animation
+*/
+
+#search-overlay,
+#menu-overlay {
+  opacity: 0;
+  transform: translate(0, -8px);
+
+  transition: all 0.3s ease;
+}
+
+#search-overlay.is-visible,
+#menu-overlay.is-visible {
+  opacity: 1;
+  transform: translate(0, 0);
 }
