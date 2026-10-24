@@ -19,5 +19,4 @@ def get_categories():
         
     finally:
         conn.close()
-    print(categories)
     return categories
