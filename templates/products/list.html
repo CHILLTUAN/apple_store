@@ -1,14 +1,35 @@
-{%extends "base.html"%} {% block title %} {{ store_name }} | {{ category_name }}
-{% endblock %} {% block content %}
-<section class="products-section-list">
-  <div class="products-grid-list">
-    <a
-      href="
-        
-        "
-    >
-      Con cặc
-    </a>
+{% extends "base.html" %} {% block title %} {{ store_name }} | {{ category_name
+}} {% endblock %} {% block content %}
+<section class="products-section">
+  {% if products %}
+  <div class="product-grid">
+    {% for product in products %}
+    <article class="product-card">
+      <img
+        src="{{ url_for('static', filename=product.image_url) }}"
+        alt="{{ product.product_name }}"
+      />
+
+      <p class="product-name">{{ product.product_name }}</p>
+
+      <div class="option-control">
+        {% for items in product.descriptions %}
+        <button type="button" data-price="{{ items.price }}">
+          {% if category_name == "Mac" %} {{ items.ram }}-{{ items.rom }} {{
+          items.charger_power }} {% elif (category_name == "iPhone") or
+          (category_name == "iPad") %} {{ items.rom }} {% else %} {% endif %}
+        </button>
+        {% endfor %}
+      </div>
+
+      <p class="product-price">{{ product.descriptions[0].price | vnd }}</p>
+
+      <a href="#" class="product-detail-link">Xem chi tiết</a>
+    </article>
+    {% endfor %}
   </div>
+  {% else %}
+  <p>Danh mục {{ category_name }} hiện chưa có sản phẩm!</p>
+  {% endif %}
 </section>
 {% endblock %}

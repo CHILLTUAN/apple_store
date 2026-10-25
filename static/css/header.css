@@ -10,6 +10,7 @@
 
 .navbar {
   margin: 0;
+  height: 100%;
   width: 100%;
 
   display: flex;
@@ -24,10 +25,32 @@
 }
 
 .nav-links {
+  height: 100%;
+  width: auto;
+
   display: flex;
-  gap: 32px;
+  align-items: center;
+}
+
+.nav-links a {
+  padding: 0 16px 0 16px;
+  height: 100%;
+  width: 100px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   color: #f5f5f7;
   font-size: 14px;
+  font-weight: 500;
+
+  transition: all 0.3s ease;
+}
+
+.nav-links a:hover,
+.nav-links a.selectedLink {
+  background-color: #3a3a3c;
 }
 
 .nav-actions {

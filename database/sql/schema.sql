@@ -23,11 +23,11 @@ CREATE TABLE Categories (
 GO
 
 
+
 CREATE TABLE Products (
     product_id INT IDENTITY(1, 1) PRIMARY KEY,
     category_id INT NOT NULL,
     product_name NVARCHAR(200) NOT NULL,
-    capacity VARCHAR(50),
     color NVARCHAR(50),
     description NVARCHAR(MAX),
     price DECIMAL(18, 2) NOT NULL,
@@ -35,14 +35,13 @@ CREATE TABLE Products (
     is_active BIT NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT GETDATE(),
     ram VARCHAR(20),
-    gpu VARCHAR(20),
+    rom VARCHAR(20),
     charger_power VARCHAR(20),
 
     FOREIGN KEY (category_id)
         REFERENCES Categories(category_id)
 );
 GO
-
 
 CREATE TABLE ProductImages (
     image_id INT IDENTITY(1, 1) PRIMARY KEY,

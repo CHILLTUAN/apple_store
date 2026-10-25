@@ -87,5 +87,36 @@ searchOverlay.addEventListener("click", function (event) {
 searchClose.addEventListener("click", closeSearch);
 
 menuOpen.addEventListener("click", openMenu);
-
 menuClose.addEventListener("click", closeMenu);
+// ========================= ========================= base.html ========================= =========================
+const links = document.querySelectorAll(".nav-links a");
+links.forEach((link) => {
+  if (window.location.pathname === link.pathname) {
+    link.classList.add("selectedLink");
+  } else {
+    link.classList.remove("selectedlink");
+  }
+});
+
+// ========================= ========================= products/list.html ========================= =========================
+const capacityButtons = document.querySelectorAll(".option-control button");
+
+capacityButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const price = button.dataset.price;
+
+    const productCard = button.closest(".product-card");
+    const productPrice = productCard.querySelector(".product-price");
+    productPrice.textContent = Number(price).toLocaleString("vi-VN") + " ₫";
+
+    const buttonsInProductCard = productCard.querySelectorAll(
+      ".option-control button",
+    );
+
+    buttonsInProductCard.forEach((button) => {
+      button.classList.remove("selected");
+    });
+
+    button.classList.add("selected");
+  });
+});

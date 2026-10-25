@@ -29,8 +29,7 @@ def home():
                 SELECT c.category_id, 
                 c.category_name,
                 p.product_id, 
-                p.product_name, 
-                p.capacity, 
+                p.product_name,  
                 p.color, 
                 p.price, 
                 p.created_at,
@@ -85,10 +84,17 @@ def category_page(category_slug):
     try:
         cursor = conn.cursor()
         cursor.execute("""--sql
-            SELECT * 
-            FROM Products 
-            WHERE category_id = ?
-                AND is_active = 1
+            SELECT p.*, img.image_url  
+            FROM Products as p
+            OUTER APPLY (
+                SELECT TOP 1 pi.image_url
+                FROM ProductImages AS pi
+                WHERE pi.product_id = p.product_id
+                ORDER BY pi.is_primary DESC, pi.image_id ASC
+            ) AS img
+            WHERE p.category_id = ?
+                AND p.is_active = 1
+            ORDER BY p.created_at DESC, p.product_id ASC;
         """,
         (category["category_id"],)
         )
@@ -99,18 +105,17 @@ def category_page(category_slug):
         for product in products:
             name = product["product_name"]
 
-            products_by_name.setdefault(
+            x = products_by_name.setdefault(
                 name,
                 {
-                    "product_name": name, 
-                    "capacities": []
+                    "product_name": name,
+                    "image_url": product["image_url"], 
+                    "descriptions": []
                 } 
-            )["capacities"].append(
-                {
-                    "capacity": product["capacity"], 
-                    "price": product["price"]
-                }
             )
+            temp = {"ram": product["ram"], "rom": product["rom"], "charger_power": product["charger_power"], "price": product["price"]}
+            if temp not in x["descriptions"]:
+                x["descriptions"].append(temp)
     finally:
         conn.close()
     return render_template(

@@ -1,4 +1,4 @@
-
+USE APPLESTORE_SCHEMA_TEST
 /*
     Apple Store - Seed Data
     Nạp dữ liệu mẫu cho:
@@ -32,42 +32,59 @@ GO
 -- =========================================
 SET IDENTITY_INSERT dbo.Products ON;
 
+
+-- =========================================
+-- 2. PRODUCTS
+-- Cấu hình: RAM 32GB, sạc 35W
+-- ROM: 512GB cho product_id 1-4
+--      1TB   cho product_id 5-8
+-- =========================================
+SET IDENTITY_INSERT dbo.Products ON;
+
 INSERT INTO dbo.Products
-    (product_id, category_id, product_name, capacity, color,
+    (product_id, category_id, product_name, color,
      description, price, stock_quantity, is_active, created_at,
-     ram, gpu, charger_power)
+     ram, rom, charger_power)
 VALUES
-    (1, 1, N'MacBook Air 13 inch M5', '512GB', N'Ánh Sao',
+    (1, 1, N'MacBook Air 13 inch M5 32GB', N'Ánh Sao',
      N'RAM 32GB, SSD 512GB, sạc 35W',
-     45490000.00, 0, 1, '2026-10-22T13:54:44.787', NULL, NULL, NULL),
+     45490000.00, 0, 1, '2026-10-22T13:54:44.787',
+     '32GB', '512GB', '35W'),
 
-    (2, 1, N'MacBook Air 13 inch M5', '512GB', N'Bạc',
+    (2, 1, N'MacBook Air 13 inch M5 32GB', N'Bạc',
      N'RAM 32GB, SSD 512GB, sạc 35W',
-     45490000.00, 0, 1, '2026-10-22T13:54:44.787', NULL, NULL, NULL),
+     45490000.00, 0, 1, '2026-10-22T13:54:44.787',
+     '32GB', '512GB', '35W'),
 
-    (3, 1, N'MacBook Air 13 inch M5', '512GB', N'Đêm Xanh Thẳm',
+    (3, 1, N'MacBook Air 13 inch M5 32GB', N'Đêm Xanh Thẳm',
      N'RAM 32GB, SSD 512GB, sạc 35W',
-     45490000.00, 0, 1, '2026-10-22T13:54:44.787', NULL, NULL, NULL),
+     45490000.00, 0, 1, '2026-10-22T13:54:44.787',
+     '32GB', '512GB', '35W'),
 
-    (4, 1, N'MacBook Air 13 inch M5', '512GB', N'Xanh Da Trời',
+    (4, 1, N'MacBook Air 13 inch M5 32GB', N'Xanh Da Trời',
      N'RAM 32GB, SSD 512GB, sạc 35W',
-     45490000.00, 0, 1, '2026-10-22T13:54:44.787', NULL, NULL, NULL),
+     45490000.00, 0, 1, '2026-10-22T13:54:44.787',
+     '32GB', '512GB', '35W'),
 
-    (5, 1, N'MacBook Air 13 inch M5', '1TB', N'Ánh Sao',
+    (5, 1, N'MacBook Air 13 inch M5 32GB', N'Ánh Sao',
      N'RAM 32GB, SSD 1TB, sạc 35W',
-     53290000.00, 0, 1, '2026-10-22T13:54:44.787', NULL, NULL, NULL),
+     53290000.00, 0, 1, '2026-10-22T13:54:44.787',
+     '32GB', '1TB', '35W'),
 
-    (6, 1, N'MacBook Air 13 inch M5', '1TB', N'Bạc',
+    (6, 1, N'MacBook Air 13 inch M5 32GB', N'Bạc',
      N'RAM 32GB, SSD 1TB, sạc 35W',
-     53290000.00, 0, 1, '2026-10-22T13:54:44.787', NULL, NULL, NULL),
+     53290000.00, 0, 1, '2026-10-22T13:54:44.787',
+     '32GB', '1TB', '35W'),
 
-    (7, 1, N'MacBook Air 13 inch M5', '1TB', N'Đêm Xanh Thẳm',
+    (7, 1, N'MacBook Air 13 inch M5 32GB', N'Đêm Xanh Thẳm',
      N'RAM 32GB, SSD 1TB, sạc 35W',
-     53290000.00, 0, 1, '2026-10-22T13:54:44.787', NULL, NULL, NULL),
+     53290000.00, 0, 1, '2026-10-22T13:54:44.787',
+     '32GB', '1TB', '35W'),
 
-    (8, 1, N'MacBook Air 13 inch M5', '1TB', N'Xanh Da Trời',
+    (8, 1, N'MacBook Air 13 inch M5 32GB', N'Xanh Da Trời',
      N'RAM 32GB, SSD 1TB, sạc 35W',
-     53290000.00, 0, 1, '2026-10-22T13:54:44.787', NULL, NULL, NULL);
+     53290000.00, 0, 1, '2026-10-22T13:54:44.787',
+     '32GB', '1TB', '35W');
 
 SET IDENTITY_INSERT dbo.Products OFF;
 GO
@@ -101,4 +118,32 @@ VALUES
     (16, 8, 'images/products/macbook_air_13inch_m5_32gb_skyblue2.png', 0, '2026-10-22T15:19:28.947');
 
 SET IDENTITY_INSERT dbo.ProductImages OFF;
+GO
+
+
+SELECT COUNT(*) AS CategoryCount FROM dbo.Categories;
+SELECT COUNT(*) AS ProductCount FROM dbo.Products;
+SELECT COUNT(*) AS ProductImageCount FROM dbo.ProductImages;
+
+
+-- 1. Kiểm tra số lượng dữ liệu
+SELECT 'Categories' AS table_name, COUNT(*) AS total
+FROM dbo.Categories
+UNION ALL
+SELECT 'Products', COUNT(*) FROM dbo.Products
+UNION ALL
+SELECT 'ProductImages', COUNT(*) FROM dbo.ProductImages
+UNION ALL
+SELECT 'Users', COUNT(*) FROM dbo.Users
+UNION ALL
+SELECT 'Orders', COUNT(*) FROM dbo.Orders
+UNION ALL
+SELECT 'OrderDetails', COUNT(*) FROM dbo.OrderDetails;
+GO
+
+-- 2. Kiểm tra khóa ngoại sản phẩm
+SELECT p.product_id, p.product_name, c.category_name
+FROM dbo.Products AS p
+JOIN dbo.Categories AS c
+    ON p.category_id = c.category_id;
 GO
