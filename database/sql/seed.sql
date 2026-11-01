@@ -84,7 +84,112 @@ VALUES
     (8, 1, N'MacBook Air 13 inch M5 32GB', N'Xanh Da Trời',
      N'RAM 32GB, SSD 1TB, sạc 35W',
      53290000.00, 0, 1, '2026-10-22T13:54:44.787',
-     '32GB', '1TB', '35W');
+     '32GB', '1TB', '35W'),
+
+    -- Sample iPad catalog entries; the category image is a temporary placeholder.
+    (9, 2, N'iPad Pro 11 inch', N'Đen',
+     N'Dữ liệu mẫu iPad Pro 11 inch',
+     29990000.00, 0, 1, '2026-10-23T13:54:44.787',
+     NULL, '256GB', NULL),
+
+    (10, 2, N'iPad Pro 13 inch', N'Đen',
+     N'Dữ liệu mẫu iPad Pro 13 inch',
+     37990000.00, 0, 1, '2026-10-23T13:54:44.787',
+     NULL, '256GB', NULL),
+
+    (11, 2, N'iPad Air 11 inch', N'Xanh',
+     N'Dữ liệu mẫu iPad Air 11 inch',
+     19990000.00, 0, 1, '2026-10-23T13:54:44.787',
+     NULL, '128GB', NULL),
+
+    (12, 2, N'iPad Air 13 inch', N'Xanh',
+     N'Dữ liệu mẫu iPad Air 13 inch',
+     26990000.00, 0, 1, '2026-10-23T13:54:44.787',
+     NULL, '128GB', NULL),
+
+    -- Sample iPhone catalog entries; the category image is a temporary placeholder.
+    (13, 3, N'iPhone 17', N'Đen',
+     N'Dữ liệu mẫu iPhone 17',
+     24990000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, '256GB', NULL),
+
+    (14, 3, N'iPhone Air', N'Trắng',
+     N'Dữ liệu mẫu iPhone Air',
+     31990000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, '256GB', NULL),
+
+    (15, 3, N'iPhone 17 Pro', N'Cam Vũ Trụ',
+     N'Dữ liệu mẫu iPhone 17 Pro',
+     34990000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, '256GB', NULL),
+
+    (16, 3, N'iPhone 17 Pro Max', N'Xanh Đậm',
+     N'Dữ liệu mẫu iPhone 17 Pro Max',
+     37990000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, '256GB', NULL),
+
+    -- Sample Watch catalog entries; the category image is a temporary placeholder.
+    (17, 4, N'Apple Watch Series 11 42mm', N'Đen',
+     N'Dữ liệu mẫu Apple Watch Series 11 42mm',
+     10990000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, NULL, NULL),
+
+    (18, 4, N'Apple Watch Series 11 46mm', N'Bạc',
+     N'Dữ liệu mẫu Apple Watch Series 11 46mm',
+     11990000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, NULL, NULL),
+
+    (19, 4, N'Apple Watch SE 3 40mm', N'Đen',
+     N'Dữ liệu mẫu Apple Watch SE 3 40mm',
+     6490000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, NULL, NULL),
+
+    (20, 4, N'Apple Watch Ultra 3 49mm', N'Titan Tự Nhiên',
+     N'Dữ liệu mẫu Apple Watch Ultra 3 49mm',
+     22990000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, NULL, NULL),
+
+    -- Sample AirPods catalog entries; the category image is a temporary placeholder.
+    (21, 5, N'AirPods 4', N'Trắng',
+     N'Dữ liệu mẫu AirPods 4',
+     3490000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, NULL, NULL),
+
+    (22, 5, N'AirPods 4 chống ồn chủ động', N'Trắng',
+     N'Dữ liệu mẫu AirPods 4 chống ồn chủ động',
+     4990000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, NULL, NULL),
+
+    (23, 5, N'AirPods Pro 3', N'Trắng',
+     N'Dữ liệu mẫu AirPods Pro 3',
+     6490000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, NULL, NULL),
+
+    (24, 5, N'AirPods Max USB-C', N'Đêm Xanh Thẳm',
+     N'Dữ liệu mẫu AirPods Max USB-C',
+     13990000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, NULL, NULL),
+
+    -- Sample accessories; the category image is a temporary placeholder.
+    (25, 6, N'Cáp sạc USB-C 60W', N'Trắng',
+     N'Dữ liệu mẫu cáp sạc USB-C 60W',
+     590000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, NULL, '60W'),
+
+    (26, 6, N'Củ sạc USB-C 20W', N'Trắng',
+     N'Dữ liệu mẫu củ sạc USB-C 20W',
+     490000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, NULL, '20W'),
+
+    (27, 6, N'Củ sạc USB-C kép 35W', N'Trắng',
+     N'Dữ liệu mẫu củ sạc USB-C kép 35W',
+     1490000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, NULL, '35W'),
+
+    (28, 6, N'Bộ sạc MagSafe', N'Trắng',
+     N'Dữ liệu mẫu bộ sạc MagSafe',
+     1190000.00, 0, 1, '2026-10-24T13:54:44.787',
+     NULL, NULL, NULL);
 
 SET IDENTITY_INSERT dbo.Products OFF;
 GO
@@ -115,7 +220,32 @@ VALUES
     (13, 4, 'images/products/macbook_air_13inch_m5_32gb_skyblue1.png', 1, '2026-10-22T15:19:28.947'),
     (14, 8, 'images/products/macbook_air_13inch_m5_32gb_skyblue1.png', 1, '2026-10-22T15:19:28.947'),
     (15, 4, 'images/products/macbook_air_13inch_m5_32gb_skyblue2.png', 0, '2026-10-22T15:19:28.947'),
-    (16, 8, 'images/products/macbook_air_13inch_m5_32gb_skyblue2.png', 0, '2026-10-22T15:19:28.947');
+    (16, 8, 'images/products/macbook_air_13inch_m5_32gb_skyblue2.png', 0, '2026-10-22T15:19:28.947'),
+    --Model Ipad
+    (17, 9, 'images/categories/ipad.png', 1, '2026-10-23T15:19:28.947'),
+    (18, 10, 'images/categories/ipad.png', 1, '2026-10-23T15:19:28.947'),
+    (19, 11, 'images/categories/ipad.png', 1, '2026-10-23T15:19:28.947'),
+    (20, 12, 'images/categories/ipad.png', 1, '2026-10-23T15:19:28.947'),
+    -- Sample product images use category placeholders until product photos are added.
+    (21, 13, 'images/categories/iphone.png', 1, '2026-10-24T15:19:28.947'),
+    (22, 14, 'images/categories/iphone.png', 1, '2026-10-24T15:19:28.947'),
+    (23, 15, 'images/categories/iphone.png', 1, '2026-10-24T15:19:28.947'),
+    (24, 16, 'images/categories/iphone.png', 1, '2026-10-24T15:19:28.947'),
+
+    (25, 17, 'images/categories/watch.png', 1, '2026-10-24T15:19:28.947'),
+    (26, 18, 'images/categories/watch.png', 1, '2026-10-24T15:19:28.947'),
+    (27, 19, 'images/categories/watch.png', 1, '2026-10-24T15:19:28.947'),
+    (28, 20, 'images/categories/watch.png', 1, '2026-10-24T15:19:28.947'),
+
+    (29, 21, 'images/categories/airpods.png', 1, '2026-10-24T15:19:28.947'),
+    (30, 22, 'images/categories/airpods.png', 1, '2026-10-24T15:19:28.947'),
+    (31, 23, 'images/categories/airpods.png', 1, '2026-10-24T15:19:28.947'),
+    (32, 24, 'images/categories/airpods.png', 1, '2026-10-24T15:19:28.947'),
+
+    (33, 25, 'images/categories/phu_kien.png', 1, '2026-10-24T15:19:28.947'),
+    (34, 26, 'images/categories/phu_kien.png', 1, '2026-10-24T15:19:28.947'),
+    (35, 27, 'images/categories/phu_kien.png', 1, '2026-10-24T15:19:28.947'),
+    (36, 28, 'images/categories/phu_kien.png', 1, '2026-10-24T15:19:28.947');
 
 SET IDENTITY_INSERT dbo.ProductImages OFF;
 GO
