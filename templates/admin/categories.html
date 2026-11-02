@@ -1,0 +1,13 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+<div class="page-heading"><div><p class="eyebrow">QUẢN LÝ CỬA HÀNG</p><h1>Danh mục</h1><p class="page-subtitle">Quản lý các nhóm sản phẩm hiển thị trên cửa hàng.</p></div><a class="button button-dark" href="{{ url_for('admin.edit_category') }}">＋ Thêm danh mục</a></div>
+<section class="panel">
+  {% if category_rows %}
+  <div class="table-wrap"><table><thead><tr><th>Tên danh mục</th><th>Slug</th><th>Ảnh</th><th>Trạng thái</th><th></th></tr></thead><tbody>
+  {% for category in category_rows %}
+  <tr><td class="strong">{{ category.category_name }}</td><td><code>{{ category.slug }}</code></td><td>{{ category.image_url or "—" }}</td><td><span class="status-pill {{ 'status-green' if category.is_active else 'status-muted' }}">{{ "Đang hiển thị" if category.is_active else "Đã ẩn" }}</span></td><td><a class="button button-small button-light" href="{{ url_for('admin.edit_category', category_id=category.category_id) }}">Sửa</a></td></tr>
+  {% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="empty-state">Chưa có danh mục.</div>{% endif %}
+</section>
+{% endblock %}

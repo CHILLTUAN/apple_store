@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+<div class="page-heading"><div><p class="eyebrow"><a href="{{ url_for('admin.users') }}">NGƯỜI DÙNG</a> / {{ "CHỈNH SỬA" if user else "THÊM MỚI" }}</p><h1>{{ title }}</h1><p class="page-subtitle">Mật khẩu luôn được lưu dưới dạng băm, không lưu văn bản thuần.</p></div></div>
+<form class="panel form-panel" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="form-grid">
+    <label class="field">Họ và tên<input name="full_name" required maxlength="100" value="{{ user.full_name if user else '' }}"></label>
+    <label class="field">Tên đăng nhập<input name="username" required maxlength="50" value="{{ user.username if user else '' }}"></label>
+    <label class="field">Email<input type="email" name="email" maxlength="100" value="{{ user.email if user else '' }}"></label>
+    <label class="field">Số điện thoại<input name="phone" maxlength="15" value="{{ user.phone if user else '' }}"></label>
+    <label class="field field-wide">Địa chỉ<input name="address" maxlength="255" value="{{ user.address if user else '' }}"></label>
+    <label class="field">{{ "Mật khẩu mới (để trống nếu không đổi)" if user else "Mật khẩu" }}<input type="password" name="password" {% if not user %}required{% endif %} minlength="8" autocomplete="new-password"></label>
+    <label class="field">Vai trò<select name="role"><option value="1" {% if user and user.role == 1 %}selected{% endif %}>Quản trị viên</option><option value="2" {% if user and user.role == 2 %}selected{% endif %}>Nhân viên</option><option value="3" {% if not user or user.role == 3 %}selected{% endif %}>Khách hàng</option></select></label>
+    {% if user %}<label class="field field-wide">Trạng thái<select name="is_active"><option value="1" {% if user.is_active %}selected{% endif %}>Đang hoạt động</option><option value="0" {% if not user.is_active %}selected{% endif %}>Đã khóa</option></select></label>{% endif %}
+  </div>
+  <div class="form-actions"><a class="button button-light" href="{{ url_for('admin.users') }}">Hủy</a><button class="button button-dark" type="submit">Lưu người dùng</button></div>
+</form>
+{% endblock %}

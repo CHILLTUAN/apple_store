@@ -1,0 +1,12 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+<div class="page-heading"><div><p class="eyebrow">BÁO CÁO</p><h1>Thống kê doanh thu</h1><p class="page-subtitle">Tổng hợp doanh thu 12 tháng gần nhất, không bao gồm đơn đã hủy.</p></div></div>
+<section class="panel">
+  <div class="panel-heading"><div><h2>Doanh thu theo tháng</h2><p>Đơn vị: Việt Nam đồng</p></div></div>
+  {% if monthly_sales %}
+  <div class="table-wrap"><table><thead><tr><th>Tháng</th><th>Số đơn hàng</th><th>Doanh thu</th></tr></thead><tbody>
+    {% for month in monthly_sales %}<tr><td class="strong">{{ month.month_start.strftime("%m/%Y") }}</td><td>{{ month.order_count }}</td><td class="strong">{{ month.revenue|vnd }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="empty-state">Chưa có dữ liệu doanh thu trong 12 tháng gần nhất.</div>{% endif %}
+</section>
+{% endblock %}

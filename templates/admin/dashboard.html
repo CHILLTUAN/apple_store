@@ -1,0 +1,38 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+<div class="page-heading">
+  <div><p class="eyebrow">APPLE STORE / TỔNG QUAN</p><h1>Chào {{ g.admin_user.full_name }}</h1><p class="page-subtitle">Đây là tình hình hoạt động của cửa hàng hôm nay.</p></div>
+  <a class="button button-dark" href="{{ url_for('admin.new_product') }}">＋ Thêm sản phẩm</a>
+</div>
+<section class="stat-grid" aria-label="Chỉ số tổng quan">
+  <article class="stat-card"><div class="stat-card-top"><span>Doanh thu hôm nay</span><span class="stat-icon">₫</span></div><strong>{{ stats.revenue_today|vnd }}</strong><small>Tháng này: {{ stats.revenue_month|vnd }}</small></article>
+  <article class="stat-card"><div class="stat-card-top"><span>Đơn hàng</span><span class="stat-icon">▤</span></div><strong>{{ stats.total_orders }}</strong><small>{{ stats.pending_orders }} đơn đang chờ duyệt</small></article>
+  <article class="stat-card"><div class="stat-card-top"><span>Sản phẩm trên trang chủ</span><span class="stat-icon">▣</span></div><strong>{{ storefront_product_count }}</strong><small>Khớp với danh sách khách hàng nhìn thấy</small></article>
+  <article class="stat-card"><div class="stat-card-top"><span>Khách hàng</span><span class="stat-icon">♙</span></div><strong>{{ stats.customers }}</strong><small>Doanh thu năm: {{ stats.revenue_year|vnd }}</small></article>
+</section>
+<section class="panel">
+  <div class="panel-heading"><div><h2>Đơn hàng gần đây</h2><p>Các đơn mới nhất cần theo dõi</p></div><a class="text-link" href="{{ url_for('admin.orders') }}">Xem tất cả <span>→</span></a></div>
+  {% if recent_orders %}
+  <div class="table-wrap"><table><thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Ngày đặt</th><th>Thanh toán</th><th>Tổng tiền</th><th>Trạng thái</th></tr></thead><tbody>
+    {% for order in recent_orders %}
+    <tr><td class="strong">#{{ order.order_id }}</td><td>{{ order.full_name }}</td><td>{{ order.order_date.strftime("%d/%m/%Y %H:%M") if order.order_date else "—" }}</td><td>{{ order.payment_method or "—" }}</td><td class="strong">{{ order.total_amount|vnd }}</td><td><span class="status-pill">{{ order.order_status }}</span></td></tr>
+    {% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="empty-state">Chưa có đơn hàng nào.</div>{% endif %}
+</section>
+<section class="panel revenue-panel">
+  <div class="panel-heading"><div><h2>Doanh thu 6 tháng gần nhất</h2><p>Không bao gồm đơn hàng đã hủy</p></div><a class="text-link" href="{{ url_for('admin.revenue') }}">Báo cáo chi tiết →</a></div>
+  {% if monthly_revenue %}
+  <div class="revenue-chart" aria-label="Biểu đồ doanh thu 6 tháng gần nhất">
+    {% for month in monthly_revenue %}
+    <div class="chart-row"><span>{{ month.month_label }}</span><div class="chart-track"><div class="chart-bar" style="width: {{ ((month.revenue / revenue_max) * 100)|round|int if revenue_max else 0 }}%"></div></div><strong>{{ month.revenue|vnd }}</strong></div>
+    {% endfor %}
+  </div>
+  {% else %}<div class="empty-state">Chưa có dữ liệu doanh thu.</div>{% endif %}
+</section>
+<section class="dashboard-bottom">
+  <a class="shortcut-card" href="{{ url_for('admin.products') }}"><span class="shortcut-icon">▣</span><span><strong>Quản lý sản phẩm</strong><small>Thêm, sửa và cập nhật tồn kho</small></span><b>→</b></a>
+  <a class="shortcut-card" href="{{ url_for('admin.users') }}"><span class="shortcut-icon">♧</span><span><strong>Quản lý người dùng</strong><small>Tạo tài khoản và phân quyền</small></span><b>→</b></a>
+  <a class="shortcut-card" href="{{ url_for('admin.revenue') }}"><span class="shortcut-icon">↗</span><span><strong>Báo cáo doanh thu</strong><small>Theo dõi doanh thu theo tháng</small></span><b>→</b></a>
+</section>
+{% endblock %}

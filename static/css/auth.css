@@ -147,6 +147,15 @@ CSS for the login page
   text-decoration: underline;
 }
 
+.admin-login-note {
+  max-width: 360px;
+  margin: 0 0 8px;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
 /* CSS for register page */
 
 .register-border {

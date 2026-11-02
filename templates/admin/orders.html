@@ -1,0 +1,19 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+<div class="page-heading"><div><p class="eyebrow">QUẢN LÝ CỬA HÀNG</p><h1>Đơn hàng</h1><p class="page-subtitle">Theo dõi thông tin giao hàng, thanh toán và trạng thái xử lý.</p></div></div>
+<section class="panel">
+  <div class="panel-heading"><div><h2>Danh sách đơn hàng</h2><p>Tối đa 250 đơn hàng mới nhất</p></div><form class="inline-search" method="get"><input type="search" name="q" value="{{ search }}" placeholder="Mã đơn hoặc tên khách" aria-label="Tìm đơn hàng"><button class="button button-light" type="submit">Tìm</button></form></div>
+  {% if orders %}
+  <div class="table-wrap"><table><thead><tr><th>Mã đơn / Ngày</th><th>Khách hàng</th><th>Địa chỉ nhận</th><th>Thanh toán</th><th>Tổng tiền</th><th>Trạng thái / Hóa đơn</th></tr></thead><tbody>
+  {% for order in orders %}
+  <tr>
+    <td><strong>#{{ order.order_id }}</strong><small class="table-subtext">{{ order.order_date.strftime("%d/%m/%Y %H:%M") if order.order_date else "—" }}</small></td>
+    <td><strong>{{ order.full_name }}</strong><small class="table-subtext">{{ order.phone or "Chưa có số điện thoại" }}</small></td>
+    <td class="address-cell">{{ order.shipping_address }}</td><td>{{ order.payment_method or "—" }}</td><td class="strong">{{ order.total_amount|vnd }}</td>
+    <td><div class="order-actions"><form class="status-form" method="post" action="{{ url_for('admin.update_order_status', order_id=order.order_id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><select name="order_status" aria-label="Trạng thái đơn {{ order.order_id }}">{% for status in statuses %}<option value="{{ status }}" {% if order.order_status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}</select><button class="button button-small button-light" type="submit">Cập nhật</button></form><a class="button button-small button-light" href="{{ url_for('admin.order_invoice', order_id=order.order_id) }}">Hóa đơn</a></div></td>
+  </tr>
+  {% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="empty-state">Không tìm thấy đơn hàng.</div>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title }} | Quản trị Apple Store</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}" />
+  </head>
+  <body class="admin-body">
+    <aside class="admin-sidebar">
+      <a href="{{ url_for('admin.dashboard') }}" class="admin-brand">
+        <span class="brand-mark"><img src="{{ url_for('static', filename='images/logo/apple.svg') }}" alt="Apple" /></span>
+        <span class="admin-brand-copy">Apple Store<small>ADMINISTRATION</small></span>
+      </a>
+      <p class="nav-caption">QUẢN LÝ</p>
+      <nav class="admin-nav" aria-label="Điều hướng quản trị">
+        <a class="{{ 'is-active' if active_nav == 'dashboard' }}" href="{{ url_for('admin.dashboard') }}"><span>◫</span>Tổng quan</a>
+        <a class="{{ 'is-active' if active_nav == 'products' }}" href="{{ url_for('admin.products') }}"><span>▣</span>Sản phẩm</a>
+        <a class="{{ 'is-active' if active_nav == 'categories' }}" href="{{ url_for('admin.categories') }}"><span>▦</span>Danh mục</a>
+        <a class="{{ 'is-active' if active_nav == 'orders' }}" href="{{ url_for('admin.orders') }}"><span>▤</span>Đơn hàng</a>
+        <a class="{{ 'is-active' if active_nav == 'customers' }}" href="{{ url_for('admin.customers') }}"><span>♙</span>Khách hàng</a>
+        <a class="{{ 'is-active' if active_nav == 'users' }}" href="{{ url_for('admin.users') }}"><span>♧</span>Người dùng</a>
+        <a class="{{ 'is-active' if active_nav == 'vouchers' }}" href="{{ url_for('admin.vouchers') }}"><span>％</span>Mã giảm giá</a>
+        <a class="{{ 'is-active' if active_nav == 'revenue' }}" href="{{ url_for('admin.revenue') }}"><span>↗</span>Thống kê doanh thu</a>
+      </nav>
+      <p class="nav-caption nav-caption-bottom">HỆ THỐNG</p>
+      <nav class="admin-nav">
+        <a class="{{ 'is-active' if active_nav == 'settings' }}" href="{{ url_for('admin.settings') }}"><span>⚙</span>Cài đặt</a>
+        <a href="{{ url_for('home') }}"><span>⌂</span>Về cửa hàng</a>
+      </nav>
+      <div class="sidebar-user">
+        <span class="user-avatar">{{ g.admin_user.full_name[:1] }}</span>
+        <span class="user-label">{{ g.admin_user.full_name }}<small>Quản trị viên</small></span>
+        <form action="{{ url_for('logout') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          <button class="logout-button" type="submit" aria-label="Đăng xuất" title="Đăng xuất">↪</button>
+        </form>
+      </div>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <form class="admin-search" action="{{ url_for('admin.products') }}" method="get">
+          <span aria-hidden="true">⌕</span>
+          <input type="search" name="q" placeholder="Tìm sản phẩm..." aria-label="Tìm sản phẩm" />
+          <kbd>⌘ K</kbd>
+        </form>
+        <a class="topbar-orders" href="{{ url_for('admin.orders') }}">Đơn hàng mới <span>→</span></a>
+      </header>
+      <main class="admin-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+          <div class="admin-flashes" role="status" aria-live="polite">
+            {% for category, message in messages %}
+            <p class="admin-flash {{ category }}">{{ message }}</p>
+            {% endfor %}
+          </div>
+          {% endif %}
+        {% endwith %}
+        {% block admin_content %}{% endblock %}
+      </main>
+      <footer class="admin-footer">Apple Store · Khu vực quản trị</footer>
+    </div>
+  </body>
+</html>
