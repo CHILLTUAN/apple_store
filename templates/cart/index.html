@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ store_name }} | Giỏ hàng{% endblock %}
+{% block content %}
+<section class="cart-page">
+  <h1>Giỏ hàng</h1>
+
+  {% if items %}
+  <div class="cart-items">
+    {% for item in items %}
+    <article class="cart-item">
+      {% if item.image_url %}
+      <img
+        src="{{ url_for('static', filename=item.image_url) }}"
+        alt="{{ item.product_name }}"
+      />
+      {% endif %}
+      <div class="cart-item-info">
+        <h2>{{ item.product_name }}</h2>
+        {% if item.color %}<p>{{ item.color }}</p>{% endif %}
+        <p>Số lượng: {{ item.quantity }}</p>
+        <p>{{ item.line_total | vnd }}</p>
+      </div>
+      <form
+        action="{{ url_for('remove_from_cart', product_id=item.product_id) }}"
+        method="post"
+      >
+        <button class="remove-cart-item" type="submit">Xóa</button>
+      </form>
+    </article>
+    {% endfor %}
+  </div>
+
+  <p class="cart-total">Tổng cộng: {{ total | vnd }}</p>
+  {% else %}
+  <p>Giỏ hàng của bạn đang trống.</p>
+  {% endif %}
+
+  <a class="cart-continue-shopping" href="{{ url_for('home') }}"
+    >Tiếp tục mua sắm</a
+  >
+</section>
+{% endblock %}

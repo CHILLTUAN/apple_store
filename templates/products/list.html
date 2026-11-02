@@ -14,7 +14,11 @@
 
       <div class="option-control">
         {% for items in product.descriptions %}
-        <button type="button" data-price="{{ items.price }}">
+        <button
+          type="button"
+          data-price="{{ items.price }}"
+          data-detail-url="{{ url_for('product_detail', product_id=items.product_id) }}"
+        >
           {% if category_name == "Mac" %} {{ items.ram }}-{{ items.rom }} {{
           items.charger_power }} {% elif (category_name == "iPhone") or
           (category_name == "iPad") %} {{ items.rom }} {% else %} {% endif %}
@@ -24,7 +28,11 @@
 
       <p class="product-price">{{ product.descriptions[0].price | vnd }}</p>
 
-      <a href="#" class="product-detail-link">Xem chi tiết</a>
+      <a
+        href="{{ url_for('product_detail', product_id=product.product_id) }}"
+        class="product-detail-link"
+        >Xem chi tiết</a
+      >
     </article>
     {% endfor %}
   </div>

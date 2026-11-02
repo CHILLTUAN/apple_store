@@ -76,7 +76,7 @@
           <!--aria-controls: Cho biết button controls element nào-->
           <!--aria-expanded: Báo trạng thái mở/đóng-->
 
-          <a href="#" class="shopping-cart"
+          <a href="{{ url_for('cart_page') }}" class="shopping-cart"
             ><img
               src="{{ url_for('static', filename='images/icons/shopping-cart.png') }}"
               alt=""
@@ -160,7 +160,18 @@
     <!--==================================================-->
 
     <!--MAIN-->
-    <main class="main-content">{% block content %}{% endblock %}</main>
+    <main class="main-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-messages" role="status" aria-live="polite">
+        {% for category, message in messages %}
+        <p class="flash-message flash-{{ category }}">{{ message }}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
 
     <!--==================================================-->
 

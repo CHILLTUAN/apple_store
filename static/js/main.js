@@ -7,6 +7,19 @@ const menuOverlay = document.querySelector("#menu-overlay");
 const menuClose = document.querySelector("#menu-close");
 // querySelector(): tìm phần tử đầu tiên khớp với selector truyền vào.
 
+document.querySelectorAll(".flash-message").forEach((message) => {
+  setTimeout(() => {
+    message.classList.add("is-dismissing");
+    setTimeout(() => {
+      const container = message.parentElement;
+      message.remove();
+      if (container && container.childElementCount === 0) {
+        container.remove();
+      }
+    }, 300);
+  }, 5000);
+});
+
 function showOverlay(overlay) {
   overlay.hidden = false;
 
@@ -108,6 +121,10 @@ capacityButtons.forEach((button) => {
     const productCard = button.closest(".product-card");
     const productPrice = productCard.querySelector(".product-price");
     productPrice.textContent = Number(price).toLocaleString("vi-VN") + " ₫";
+    const detailLink = productCard.querySelector(".product-detail-link");
+    if (detailLink) {
+      detailLink.href = button.dataset.detailUrl;
+    }
 
     const buttonsInProductCard = productCard.querySelectorAll(
       ".option-control button",

@@ -23,7 +23,10 @@ endblock %} {% block content %}
 
     <div class="product-grid">
       {% for product in products %}
-      <a href="#" class="product-card">
+      <a
+        href="{{ url_for('product_detail', product_id=product.product_id) }}"
+        class="product-card"
+      >
         <img src="{{ url_for('static', filename=product.image_url) }}" alt="" />
 
         <p>{{ product.product_name }}</p>
