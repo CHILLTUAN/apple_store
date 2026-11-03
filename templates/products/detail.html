@@ -40,6 +40,7 @@
       {% endif %}
       {% if product.color %}
       <p class="product-detail-color">Màu sắc: {{ product.color }}</p>
+      {% if color_options|length > 1 %}
       <fieldset class="color-options">
         <legend>Tùy chọn màu</legend>
         <div class="color-option-list">
@@ -55,7 +56,11 @@
         </div>
       </fieldset>
       {% endif %}
+      {% endif %}
       <p class="product-detail-price">{{ product.price | vnd }}</p>
+      <p class="product-stock">
+        {% if product.stock_quantity > 0 %}Còn {{ product.stock_quantity }} sản phẩm{% else %}Hết hàng{% endif %}
+      </p>
 
       {% if product.ram or product.rom or product.charger_power %}
       <dl class="product-specifications">
@@ -79,8 +84,28 @@
         action="{{ url_for('add_to_cart', product_id=product.product_id) }}"
         method="post"
       >
-        <button class="buy-product-button" type="submit">Mua sản phẩm</button>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+        {% if supports_engraving %}
+        <label class="engraving-field">
+          Khắc laser miễn phí (không bắt buộc)
+          <input
+            type="text"
+            name="engraving_text"
+            maxlength="30"
+            placeholder="Tên, chữ hoặc ngày kỷ niệm"
+            autocomplete="off"
+          />
+          <small>Tối đa 30 ký tự. Các sản phẩm cùng cấu hình trong giỏ dùng chung nội dung khắc.</small>
+        </label>
+        {% endif %}
+        <button class="buy-product-button" type="submit" {% if product.stock_quantity < 1 %}disabled{% endif %}>
+          {% if product.stock_quantity > 0 %}Thêm vào giỏ hàng{% else %}Hết hàng{% endif %}
+        </button>
       </form>
+      <p class="purchase-service-note">
+        Giao hàng miễn phí toàn quốc (dự kiến 2–15 ngày). Muốn nâng cấp cấu hình ngoài các lựa chọn đang bán?
+        Hãy yêu cầu tư vấn khi đặt hàng.
+      </p>
     </div>
   </div>
 </section>

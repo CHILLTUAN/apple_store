@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}{{ store_name }} | Đặt hàng thành công{% endblock %}
+{% block content %}
+<section class="order-confirmation">
+  <div class="order-success-message" role="status" aria-live="polite">
+    <span class="order-success-icon" aria-hidden="true">✓</span>
+    <div>
+      <h1>Đặt hàng thành công</h1>
+      <p>Đơn hàng <strong>#{{ order.order_id }}</strong> đã được lưu. Hóa đơn bán hàng được in khi trang mở.</p>
+    </div>
+  </div>
+
+  <article class="customer-invoice">
+    <header class="customer-invoice-header">
+      <div>
+        <p class="customer-invoice-kicker">APPLE STORE</p>
+        <h2>Hóa đơn bán hàng</h2>
+      </div>
+      <div class="customer-invoice-number">
+        <strong>#{{ order.order_id }}</strong>
+        <span>{{ order.order_date.strftime("%d/%m/%Y %H:%M") if order.order_date else "—" }}</span>
+      </div>
+    </header>
+
+    <div class="customer-invoice-details">
+      <section>
+        <h3>Thông tin khách hàng</h3>
+        <p><strong>{{ order.full_name }}</strong></p>
+        <p>{{ order.phone or "—" }}</p>
+        <p>{{ order.shipping_address }}</p>
+      </section>
+      <section>
+        <h3>Thông tin thanh toán</h3>
+        <p>Phương thức: <strong>{{ order.payment_method or "—" }}</strong></p>
+        <p>Trạng thái: {{ order.payment_status or "Chưa thanh toán" }}</p>
+        <p>Trạng thái đơn: {{ order.order_status }}</p>
+      </section>
+    </div>
+
+    <div class="customer-invoice-table-wrap">
+      <table class="customer-invoice-table">
+        <thead>
+          <tr><th>Sản phẩm</th><th>Đơn giá</th><th>Số lượng</th><th>Thành tiền</th></tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>
+              <strong>{{ item.product_name }}</strong>
+              <small>{{ item.color or "" }}{% if item.engraving_text %} · Khắc: {{ item.engraving_text }}{% endif %}</small>
+            </td>
+            <td>{{ item.unit_price|vnd }}</td>
+            <td>{{ item.quantity }}</td>
+            <td><strong>{{ item.line_total|vnd }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="customer-invoice-total">
+      <p>Phí giao hàng <strong>{{ (order.shipping_fee or 0)|vnd }}</strong></p>
+      <p class="customer-invoice-grand-total">Tổng thanh toán <strong>{{ order.total_amount|vnd }}</strong></p>
+    </div>
+    {% if order.note %}
+    <p class="customer-invoice-note"><strong>Ghi chú:</strong> {{ order.note }}</p>
+    {% endif %}
+    <p class="customer-invoice-thanks">Cảm ơn quý khách đã mua sắm tại Apple Store.</p>
+  </article>
+
+  <div class="order-followup">
+    <p>Nhân viên sẽ liên hệ để xác nhận đơn hàng và hướng dẫn thanh toán. Chưa có khoản thanh toán trực tuyến nào được thực hiện.</p>
+    <button class="buy-product-button" type="button" onclick="window.print()">In lại hóa đơn</button>
+    <a class="cart-continue-shopping" href="{{ home_url }}">Về trang chủ</a>
+  </div>
+</section>
+<script>
+  (() => {
+    let returnedToStore = false;
+    const returnToStore = () => {
+      if (returnedToStore) return;
+      returnedToStore = true;
+      window.location.replace({{ home_url|tojson }});
+    };
+
+    window.addEventListener("afterprint", returnToStore, { once: true });
+    window.addEventListener("load", () => window.print(), { once: true });
+  })();
+</script>
+{% endblock %}

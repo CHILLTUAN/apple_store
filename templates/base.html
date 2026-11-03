@@ -112,7 +112,7 @@
     <!--SEARCH OVERLAY-->
     <div id="search-overlay" class="search-overlay" hidden>
       <!--hidden: Ẩn phần tử cho đến khi JavaScript bỏ thuộc tính này -->
-      <form action="" class="search-form" role="search">
+      <form action="{{ url_for('search_products') }}" class="search-form" role="search">
         <!--role="search": Báo đây là khu vực tìm kiếm -->
         <label for="search-input"
           ><img
@@ -126,6 +126,8 @@
           id="search-input"
           name="q"
           placeholder="Tìm kiếm"
+          value="{{ request.args.get('q', '') }}"
+          required
         />
 
         <button type="submit" id="search-confirm" hidden>Tìm</button>
@@ -202,6 +204,7 @@
           <a href="#">Trạng Thái Đơn Hàng</a>
           <a href="#">Hỗ Trợ Mua Hàng</a>
           <a href="#">Liên Hệ</a>
+          <a href="{{ url_for('sales.dashboard') }}">Trang nhân viên bán hàng</a>
         </div>
       </nav>
 

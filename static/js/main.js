@@ -117,10 +117,16 @@ const capacityButtons = document.querySelectorAll(".option-control button");
 capacityButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const price = button.dataset.price;
+    const stock = button.dataset.stock;
 
     const productCard = button.closest(".product-card");
     const productPrice = productCard.querySelector(".product-price");
     productPrice.textContent = Number(price).toLocaleString("vi-VN") + " ₫";
+    const stockDisplay = productCard.querySelector("[data-product-stock]");
+    if (stockDisplay) {
+      stockDisplay.textContent =
+        Number(stock) > 0 ? `Còn ${stock} sản phẩm` : "Hết hàng";
+    }
     const detailLink = productCard.querySelector(".product-detail-link");
     if (detailLink) {
       detailLink.href = button.dataset.detailUrl;
@@ -137,3 +143,56 @@ capacityButtons.forEach((button) => {
     button.classList.add("selected");
   });
 });
+
+const cartQuantityInputs = document.querySelectorAll(
+  ".cart-quantity-form input[name='quantity'][data-unit-price]",
+);
+
+if (cartQuantityInputs.length) {
+  const cartTotal = document.querySelector(".cart-total span");
+  const cartItems = document.querySelectorAll(".cart-item");
+  const currencyFormatter = new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 0,
+  });
+
+  function formatCartPrice(amount) {
+    return `${currencyFormatter.format(Math.round(amount))} ₫`;
+  }
+
+  function updateCartTotals() {
+    let total = 0;
+    cartItems.forEach((item) => {
+      const input = item.querySelector(
+        ".cart-quantity-form input[name='quantity'][data-unit-price]",
+      );
+      const lineTotalDisplay = item.querySelector(".cart-line-total");
+      let lineTotal = Number(lineTotalDisplay.dataset.lineTotal);
+
+      if (input) {
+        const quantity = Number(input.value);
+        const unitPrice = Number(input.dataset.unitPrice);
+        const maximum = Number(input.max);
+        if (
+          Number.isInteger(quantity)
+          && quantity >= 1
+          && quantity <= maximum
+          && Number.isFinite(unitPrice)
+        ) {
+          lineTotal = unitPrice * quantity;
+          lineTotalDisplay.dataset.lineTotal = String(lineTotal);
+          lineTotalDisplay.textContent = formatCartPrice(lineTotal);
+        }
+      }
+
+      total += lineTotal;
+    });
+
+    if (cartTotal) {
+      cartTotal.textContent = formatCartPrice(total);
+    }
+  }
+
+  cartQuantityInputs.forEach((input) => {
+    input.addEventListener("input", updateCartTotals);
+  });
+}

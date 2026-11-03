@@ -32,6 +32,9 @@ endblock %} {% block content %}
         <p>{{ product.product_name }}</p>
 
         <p>{{ product.price | vnd }}</p>
+        <p class="product-stock">
+          {% if product.stock_quantity > 0 %}Còn {{ product.stock_quantity }} sản phẩm{% else %}Hết hàng{% endif %}
+        </p>
       </a>
       {% endfor %}
     </div>

@@ -1,0 +1,18 @@
+{% extends "staff/base.html" %}
+{% block staff_content %}
+<div class="page-heading"><div><p class="eyebrow">APPLE STORE · BÁN HÀNG</p><h1>Tổng quan</h1><p class="page-subtitle">Xin chào {{ g.sales_staff.full_name }}, đây là tình hình kinh doanh hiện tại.</p></div></div>
+<section class="stat-grid">
+  <article class="stat-card"><div class="stat-card-top">Đơn chờ duyệt<span class="stat-icon">▤</span></div><strong>{{ stats.pending_orders }}</strong><small>Đơn cần được xử lý</small></article>
+  <article class="stat-card"><div class="stat-card-top">Đơn hôm nay<span class="stat-icon">▣</span></div><strong>{{ stats.orders_today }}</strong><small>Không bao gồm đơn đã hủy</small></article>
+  <article class="stat-card"><div class="stat-card-top">Doanh thu hôm nay<span class="stat-icon">₫</span></div><strong>{{ stats.revenue_today|vnd }}</strong><small>Đơn hàng không bị hủy</small></article>
+  <article class="stat-card"><div class="stat-card-top">Doanh thu tháng này<span class="stat-icon">↗</span></div><strong>{{ stats.revenue_month|vnd }}</strong><small>Tính từ đầu tháng</small></article>
+</section>
+<section class="panel">
+  <div class="panel-heading"><div><h2>Đơn hàng gần đây</h2><p>8 đơn hàng mới nhất</p></div><a class="text-link" href="{{ url_for('sales.orders') }}">Xem tất cả →</a></div>
+  {% if recent_orders %}
+  <div class="table-wrap"><table><thead><tr><th>Mã đơn / Ngày</th><th>Khách hàng</th><th>Tổng tiền</th><th>Trạng thái</th><th></th></tr></thead><tbody>
+    {% for order in recent_orders %}<tr><td><strong>#{{ order.order_id }}</strong><small class="table-subtext">{{ order.order_date.strftime("%d/%m/%Y %H:%M") if order.order_date else "—" }}</small></td><td>{{ order.full_name }}</td><td class="strong">{{ order.total_amount|vnd }}</td><td>{{ order.order_status }}</td><td><a class="button button-small button-light" href="{{ url_for('sales.order_invoice', order_id=order.order_id) }}">Hóa đơn</a></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="empty-state">Chưa có đơn hàng.</div>{% endif %}
+</section>
+{% endblock %}

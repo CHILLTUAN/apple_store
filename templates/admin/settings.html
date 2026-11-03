@@ -1,0 +1,39 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">HỆ THỐNG</p>
+    <h1>{{ title }}</h1>
+    <p class="page-subtitle">Tài khoản quản trị hiện tại: {{ g.admin_user.username }}</p>
+  </div>
+</div>
+<section class="panel form-panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Sản phẩm trên trang chủ</h2>
+      <p>Giới hạn số sản phẩm được hiển thị trong mỗi danh mục ở trang chủ.</p>
+    </div>
+  </div>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <label class="field">
+        Số sản phẩm mỗi danh mục
+        <input
+          type="number"
+          name="homepage_products_per_category"
+          min="1"
+          max="{{ max_home_products_per_category }}"
+          step="1"
+          value="{{ homepage_products_per_category }}"
+          required
+        >
+        <small>Nhập từ 1 đến {{ max_home_products_per_category }} sản phẩm.</small>
+      </label>
+    </div>
+    <div class="form-actions">
+      <button class="button button-dark" type="submit">Lưu cài đặt</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

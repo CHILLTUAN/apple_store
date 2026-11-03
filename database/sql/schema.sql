@@ -22,6 +22,15 @@ CREATE TABLE Categories (
 )
 GO
 
+CREATE TABLE StoreSettings (
+    setting_key NVARCHAR(100) NOT NULL PRIMARY KEY,
+    setting_value INT NOT NULL
+)
+GO
+
+INSERT INTO StoreSettings (setting_key, setting_value)
+VALUES (N'homepage_products_per_category', 4)
+GO
 
 
 CREATE TABLE Products (
@@ -65,7 +74,8 @@ CREATE TABLE Orders (
     shipping_address NVARCHAR(255) NOT NULL,
     shipping_fee DECIMAL(18, 2) DEFAULT 0,
     order_status NVARCHAR(50) DEFAULT N'Chờ duyệt',
-    note NVARCHAR(255),
+    note NVARCHAR(MAX),
+    stock_committed BIT NOT NULL CONSTRAINT DF_Orders_stock_committed DEFAULT 1,
 
     FOREIGN KEY (user_id)
         REFERENCES Users(user_id)
@@ -77,6 +87,7 @@ CREATE TABLE OrderDetails (
     product_id INT NOT NULL,
     quantity INT NOT NULL,
     unit_price DECIMAL(18, 2) NOT NULL,
+    engraving_text NVARCHAR(30) NULL,
 
     PRIMARY KEY(order_id, product_id),
 

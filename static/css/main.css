@@ -217,6 +217,51 @@ main {
   font-weight: 600;
 }
 
+.product-stock {
+  color: #515154;
+  font-size: 14px;
+}
+
+.catalog-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding: 18px;
+  background: #f5f5f7;
+  border-radius: 12px;
+}
+
+.catalog-filters label,
+.checkout-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.catalog-filters input,
+.catalog-filters select,
+.checkout-form input,
+.checkout-form textarea,
+.cart-quantity-form input {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.catalog-filters .buy-product-button,
+.checkout-form .buy-product-button {
+  width: auto;
+}
+
+.catalog-filters a {
+  padding: 10px 0;
+  color: #0066cc;
+}
+
 .product-detail-link {
   color: #0066cc;
 }
@@ -226,7 +271,9 @@ main {
 }
 
 .product-detail,
-.cart-page {
+.cart-page,
+.checkout-page,
+.order-confirmation {
   width: 100%;
   max-width: 1000px;
 }
@@ -314,6 +361,40 @@ main {
   box-shadow: 0 0 0 1px #0071e3;
 }
 
+.variant-option.unavailable {
+  color: #8e8e93;
+  background-color: #f5f5f7;
+}
+
+.engraving-field {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0;
+  font-weight: 600;
+}
+
+.engraving-field input {
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.engraving-field small,
+.purchase-service-note,
+.payment-disclaimer,
+.delivery-estimate {
+  color: #6e6e73;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.purchase-service-note {
+  margin-top: 16px;
+}
+
 .product-detail-price {
   font-size: 24px;
   font-weight: 600;
@@ -357,6 +438,16 @@ main {
   background-color: #0077ed;
 }
 
+.buy-product-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.stock-warning {
+  color: #b42318;
+  font-weight: 600;
+}
+
 .cart-items {
   display: flex;
   flex-direction: column;
@@ -391,6 +482,31 @@ main {
   margin: 4px 0;
 }
 
+.cart-quantity-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.cart-quantity-form input {
+  width: 84px;
+}
+
+.cart-quantity-form button {
+  padding: 8px 12px;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.cart-quantity-form span {
+  color: #6e6e73;
+  font-size: 13px;
+}
+
 .remove-cart-item {
   padding: 8px 12px;
   border: 1px solid #d2d2d7;
@@ -409,6 +525,329 @@ main {
   display: inline-block;
   margin-top: 16px;
   color: #0066cc;
+}
+
+.checkout-link {
+  display: inline-block;
+  width: auto;
+  text-align: center;
+}
+
+.checkout-page,
+.order-confirmation {
+  max-width: 720px;
+}
+
+.order-confirmation {
+  width: 100%;
+}
+
+.order-success-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 18px 20px;
+  border: 1px solid #b7dfc2;
+  border-radius: 12px;
+  color: #155d32;
+  background: #effaf2;
+}
+
+.order-success-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border-radius: 50%;
+  color: #fff;
+  background: #18864b;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.order-success-message h1,
+.order-success-message p {
+  margin: 0;
+}
+
+.order-success-message h1 {
+  font-size: 20px;
+}
+
+.order-success-message p {
+  margin-top: 5px;
+  line-height: 1.5;
+}
+
+.customer-invoice {
+  width: 100%;
+  padding: 28px;
+  border: 1px solid #e1e3e6;
+  border-radius: 12px;
+  background: #fff;
+  color: #202124;
+}
+
+.customer-invoice-header {
+  padding-bottom: 20px;
+  border-bottom: 2px solid #202124;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.customer-invoice-kicker {
+  margin: 0 0 7px;
+  color: #6e6e73;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+
+.customer-invoice-header h2 {
+  margin: 0;
+  font-size: 23px;
+}
+
+.customer-invoice-number {
+  display: grid;
+  gap: 5px;
+  text-align: right;
+}
+
+.customer-invoice-number span,
+.customer-invoice-details p,
+.customer-invoice-note {
+  color: #60636a;
+  font-size: 13px;
+}
+
+.customer-invoice-details {
+  padding: 20px 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.customer-invoice-details h3 {
+  margin: 0 0 9px;
+  font-size: 14px;
+}
+
+.customer-invoice-details p {
+  margin: 5px 0;
+  overflow-wrap: anywhere;
+}
+
+.customer-invoice-table-wrap {
+  overflow-x: auto;
+}
+
+.customer-invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.customer-invoice-table th {
+  padding: 10px 8px;
+  border-top: 1px solid #e5e6e8;
+  border-bottom: 1px solid #e5e6e8;
+  color: #60636a;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.customer-invoice-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #eee;
+  font-size: 12px;
+}
+
+.customer-invoice-table td:first-child {
+  min-width: 150px;
+}
+
+.customer-invoice-table td small {
+  display: block;
+  margin-top: 4px;
+  color: #73767d;
+}
+
+.customer-invoice-total {
+  width: min(100%, 340px);
+  margin: 18px 0 0 auto;
+}
+
+.customer-invoice-total p {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.customer-invoice-total .customer-invoice-grand-total {
+  padding-top: 12px;
+  border-top: 1px solid #dfe1e4;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.customer-invoice-note {
+  margin: 18px 0 0;
+  white-space: pre-line;
+}
+
+.customer-invoice-thanks {
+  margin: 24px 0 0;
+  color: #73767d;
+  font-size: 12px;
+  text-align: center;
+}
+
+.order-followup {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.order-followup p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.order-followup .buy-product-button {
+  width: auto;
+}
+
+.checkout-page h1,
+.order-confirmation h1 {
+  margin-top: 0;
+}
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+
+  .site-header,
+  .site-footer,
+  .flash-messages,
+  .order-success-message,
+  .order-followup {
+    display: none !important;
+  }
+
+  main.main-content {
+    display: block;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .order-confirmation {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .customer-invoice {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .customer-invoice-table-wrap {
+    overflow: visible;
+  }
+
+  .customer-invoice-table {
+    white-space: normal;
+  }
+}
+
+.checkout-summary {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: #f5f5f7;
+  border-radius: 12px;
+}
+
+.checkout-summary h2 {
+  margin-top: 0;
+}
+
+.checkout-summary p {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.checkout-form {
+  display: grid;
+  gap: 16px;
+}
+
+.checkout-form textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.checkout-choice-group {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid #d2d2d7;
+  border-radius: 12px;
+}
+
+.checkout-choice-group legend {
+  padding: 0 8px;
+  font-weight: 700;
+}
+
+.checkout-choice-group select {
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+}
+
+.checkout-choice-group [hidden] {
+  display: none;
+}
+
+.checkout-choice-group .checkout-checkbox {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  font-weight: 500;
+}
+
+.checkout-checkbox input {
+  min-height: auto;
+  margin: 3px 8px 0 0;
+}
+
+.checkout-choice-group .payment-disclaimer {
+  margin: 0;
+}
+
+.installment-estimate {
+  margin: 0;
+  font-weight: 600;
+}
+
+.checkout-form .buy-product-button {
+  width: 100%;
 }
 
 @media (max-width: 520px) {

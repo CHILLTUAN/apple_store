@@ -312,6 +312,16 @@
   background: #f4f5f7;
 }
 
+.button-approve {
+  border-color: #b9e2c8;
+  color: #176b3e;
+  background: #eef9f2;
+}
+
+.button-approve:hover {
+  background: #dff3e7;
+}
+
 .button-danger {
   border-color: #f2d5d2;
   color: var(--red);
@@ -442,6 +452,20 @@ th {
   background: #fbfbfc;
   font-size: 10px;
   font-weight: 650;
+}
+
+.order-list-table th,
+.order-list-table td {
+  text-align: center;
+}
+
+.order-list-table .order-actions {
+  justify-items: center;
+}
+
+.order-list-table .approval-actions,
+.order-list-table .status-form {
+  justify-content: center;
 }
 
 td {
@@ -622,10 +646,22 @@ td > strong {
 
 .row-actions,
 .inline-search,
-.status-form {
+.status-form,
+.approval-actions {
   display: flex;
   align-items: center;
   gap: 7px;
+}
+
+.approval-actions {
+  flex-wrap: wrap;
+}
+
+.order-status-text {
+  color: #40454d;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .inline-search input {

@@ -1,6 +1,33 @@
 {% extends "base.html" %} {% block title %} {{ store_name }} | {{ category_name
 }} {% endblock %} {% block content %}
 <section class="products-section">
+  <h1>{{ category_name }}</h1>
+  <form class="catalog-filters" method="get">
+    <label>
+      Tìm theo tên
+      <input type="search" name="q" value="{{ filters.search }}" />
+    </label>
+    <label>
+      Giá từ
+      <input type="number" name="min_price" min="0" step="1000" value="{{ filters.min_price if filters.min_price is not none else '' }}" />
+    </label>
+    <label>
+      Đến
+      <input type="number" name="max_price" min="0" step="1000" value="{{ filters.max_price if filters.max_price is not none else '' }}" />
+    </label>
+    <label>
+      Sắp xếp
+      <select name="sort">
+        <option value="newest" {% if filters.sort == "newest" %}selected{% endif %}>Mới nhất</option>
+        <option value="price_asc" {% if filters.sort == "price_asc" %}selected{% endif %}>Giá tăng dần</option>
+        <option value="price_desc" {% if filters.sort == "price_desc" %}selected{% endif %}>Giá giảm dần</option>
+        <option value="name" {% if filters.sort == "name" %}selected{% endif %}>Tên A–Z</option>
+      </select>
+    </label>
+    <button class="buy-product-button" type="submit">Lọc sản phẩm</button>
+    <a href="{{ url_for('category_page', category_slug=request.view_args.category_slug) }}">Xóa bộ lọc</a>
+  </form>
+
   {% if products %}
   <div class="product-grid">
     {% for product in products %}
@@ -17,6 +44,7 @@
         <button
           type="button"
           data-price="{{ items.price }}"
+          data-stock="{{ items.stock_quantity }}"
           data-detail-url="{{ url_for('product_detail', product_id=items.product_id) }}"
         >
           {% if category_name == "Mac" %} {{ items.ram }}-{{ items.rom }} {{
@@ -27,6 +55,9 @@
       </div>
 
       <p class="product-price">{{ product.descriptions[0].price | vnd }}</p>
+      <p class="product-stock" data-product-stock>
+        {% if product.descriptions[0].stock_quantity > 0 %}Còn {{ product.descriptions[0].stock_quantity }} sản phẩm{% else %}Hết hàng{% endif %}
+      </p>
 
       <a
         href="{{ url_for('product_detail', product_id=product.product_id) }}"

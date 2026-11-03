@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ store_name }} | Tìm kiếm sản phẩm{% endblock %}
+{% block content %}
+<section class="products-section">
+  <h1>Kết quả tìm kiếm{% if filters.search %}: {{ filters.search }}{% endif %}</h1>
+  <form class="catalog-filters" action="{{ url_for('search_products') }}" method="get">
+    <label>
+      Tên sản phẩm
+      <input type="search" name="q" value="{{ filters.search }}" />
+    </label>
+    <label>
+      Giá từ
+      <input type="number" name="min_price" min="0" step="1000" value="{{ filters.min_price if filters.min_price is not none else '' }}" />
+    </label>
+    <label>
+      Đến
+      <input type="number" name="max_price" min="0" step="1000" value="{{ filters.max_price if filters.max_price is not none else '' }}" />
+    </label>
+    <label>
+      Sắp xếp
+      <select name="sort">
+        <option value="newest" {% if filters.sort == "newest" %}selected{% endif %}>Mới nhất</option>
+        <option value="price_asc" {% if filters.sort == "price_asc" %}selected{% endif %}>Giá tăng dần</option>
+        <option value="price_desc" {% if filters.sort == "price_desc" %}selected{% endif %}>Giá giảm dần</option>
+        <option value="name" {% if filters.sort == "name" %}selected{% endif %}>Tên A–Z</option>
+      </select>
+    </label>
+    <button class="buy-product-button" type="submit">Tìm và lọc</button>
+  </form>
+
+  {% if products %}
+  <div class="product-grid">
+    {% for product in products %}
+    <a class="product-card" href="{{ url_for('product_detail', product_id=product.product_id) }}">
+      {% if product.image_url %}
+      <img src="{{ url_for('static', filename=product.image_url) }}" alt="{{ product.product_name }}" />
+      {% endif %}
+      <p class="product-name">{{ product.product_name }}</p>
+      <p>{{ product.category_name }}{% if product.color %} · {{ product.color }}{% endif %}</p>
+      <p class="product-price">{{ product.price | vnd }}</p>
+      <p class="product-stock">
+        {% if product.stock_quantity > 0 %}Còn {{ product.stock_quantity }} sản phẩm{% else %}Hết hàng{% endif %}
+      </p>
+      {% if product.ram or product.rom or product.charger_power %}
+      <p>{{ product.ram or "" }}{% if product.ram and product.rom %} · {% endif %}{{ product.rom or "" }}{% if product.charger_power %} · {{ product.charger_power }}{% endif %}</p>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p>Không tìm thấy sản phẩm phù hợp.</p>
+  {% endif %}
+</section>
+{% endblock %}

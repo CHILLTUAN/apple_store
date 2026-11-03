@@ -11,7 +11,7 @@
     <div><h2>Thông tin đơn hàng</h2><p>Mã đơn: <strong>#{{ order.order_id }}</strong></p><p>Trạng thái: {{ order.order_status }}</p><p>Thanh toán: {{ order.payment_method or "—" }} · {{ order.payment_status or "—" }}</p></div>
   </div>
   <div class="table-wrap"><table><thead><tr><th>Sản phẩm</th><th>Đơn giá</th><th>Số lượng</th><th>Thành tiền</th></tr></thead><tbody>
-    {% for item in items %}<tr><td><strong>{{ item.product_name }}</strong><small class="table-subtext">{{ item.color or "" }}</small></td><td>{{ item.unit_price|vnd }}</td><td>{{ item.quantity }}</td><td class="strong">{{ item.line_total|vnd }}</td></tr>{% endfor %}
+    {% for item in items %}<tr><td><strong>{{ item.product_name }}</strong><small class="table-subtext">{{ item.color or "" }}{% if item.engraving_text %} · Khắc: {{ item.engraving_text }}{% endif %}</small></td><td>{{ item.unit_price|vnd }}</td><td>{{ item.quantity }}</td><td class="strong">{{ item.line_total|vnd }}</td></tr>{% endfor %}
   </tbody></table></div>
   <div class="invoice-total"><p>Phí vận chuyển <strong>{{ (order.shipping_fee or 0)|vnd }}</strong></p><p class="invoice-grand-total">Tổng thanh toán <strong>{{ order.total_amount|vnd }}</strong></p></div>
   {% if order.note %}<p class="invoice-note"><strong>Ghi chú:</strong> {{ order.note }}</p>{% endif %}

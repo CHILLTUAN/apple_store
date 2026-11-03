@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title }} | Nhân viên Apple Store</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}" />
+  </head>
+  <body class="admin-body">
+    <aside class="admin-sidebar">
+      <a href="{{ url_for('sales.dashboard') }}" class="admin-brand">
+        <span class="brand-mark"><img src="{{ url_for('static', filename='images/logo/apple.svg') }}" alt="Apple" /></span>
+        <span class="admin-brand-copy">Apple Store<small>SALES WORKSPACE</small></span>
+      </a>
+      <p class="nav-caption">BÁN HÀNG</p>
+      <nav class="admin-nav" aria-label="Điều hướng nhân viên">
+        <a class="{{ 'is-active' if active_nav == 'dashboard' }}" href="{{ url_for('sales.dashboard') }}"><span>◫</span>Tổng quan</a>
+        <a class="{{ 'is-active' if active_nav == 'orders' }}" href="{{ url_for('sales.orders') }}"><span>▤</span>Đơn hàng / Hóa đơn</a>
+        <a class="{{ 'is-active' if active_nav == 'products' }}" href="{{ url_for('sales.products') }}"><span>▣</span>Sản phẩm</a>
+        <a class="{{ 'is-active' if active_nav == 'reports' }}" href="{{ url_for('sales.reports') }}"><span>↗</span>Báo cáo bán hàng</a>
+      </nav>
+      <p class="nav-caption nav-caption-bottom">CỬA HÀNG</p>
+      <nav class="admin-nav">
+        <a href="{{ url_for('home') }}"><span>⌂</span>Về cửa hàng</a>
+      </nav>
+      <div class="sidebar-user">
+        <span class="user-avatar">{{ g.sales_staff.full_name[:1] }}</span>
+        <span class="user-label">{{ g.sales_staff.full_name }}<small>Nhân viên bán hàng</small></span>
+        <form action="{{ url_for('logout') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          <button class="logout-button" type="submit" aria-label="Đăng xuất" title="Đăng xuất">↪</button>
+        </form>
+      </div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <span>Không gian làm việc nhân viên</span>
+        <a class="topbar-orders" href="{{ url_for('sales.orders') }}">Quản lý đơn hàng <span>→</span></a>
+      </header>
+      <main class="admin-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+          <div class="admin-flashes" role="status" aria-live="polite">
+            {% for category, message in messages %}
+            <p class="admin-flash {{ category }}">{{ message }}</p>
+            {% endfor %}
+          </div>
+          {% endif %}
+        {% endwith %}
+        {% block staff_content %}{% endblock %}
+      </main>
+      <footer class="admin-footer">Apple Store · Nhân viên bán hàng</footer>
+    </div>
+  </body>
+</html>

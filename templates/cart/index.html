@@ -17,20 +17,62 @@
       <div class="cart-item-info">
         <h2>{{ item.product_name }}</h2>
         {% if item.color %}<p>{{ item.color }}</p>{% endif %}
-        <p>Số lượng: {{ item.quantity }}</p>
-        <p>{{ item.line_total | vnd }}</p>
+        {% if item.ram or item.rom %}
+        <p>{{ item.ram or "" }}{% if item.ram and item.rom %} · {% endif %}{{ item.rom or "" }}</p>
+        {% endif %}
+        {% if item.engraving_text %}
+        <p>Khắc laser: {{ item.engraving_text }}</p>
+        {% endif %}
+        <p>Đơn giá: {{ item.price | vnd }}</p>
+        {% if not item.stock_available %}
+        <p class="stock-warning">
+          {% if item.stock_quantity > 0 %}Chỉ còn {{ item.stock_quantity }} sản phẩm. Vui lòng cập nhật số lượng.{% else %}Sản phẩm đã hết hàng. Vui lòng xóa khỏi giỏ.{% endif %}
+        </p>
+        {% endif %}
+        <form
+          class="cart-quantity-form"
+          action="{{ url_for('update_cart_quantity', product_id=item.product_id) }}"
+          method="post"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          {% if item.stock_quantity > 0 %}
+          <label for="quantity-{{ item.product_id }}">Số lượng</label>
+          <input
+            id="quantity-{{ item.product_id }}"
+            type="number"
+            name="quantity"
+            min="1"
+            max="{{ item.stock_quantity }}"
+            value="{{ item.quantity }}"
+            required
+            data-unit-price="{{ item.price }}"
+          />
+          <button type="submit">Cập nhật</button>
+          {% else %}
+          <span>Số lượng: {{ item.quantity }} · Hết hàng</span>
+          {% endif %}
+        </form>
+        <p class="cart-line-total" data-line-total="{{ item.line_total }}">
+          {{ item.line_total | vnd }}
+        </p>
       </div>
       <form
         action="{{ url_for('remove_from_cart', product_id=item.product_id) }}"
         method="post"
       >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
         <button class="remove-cart-item" type="submit">Xóa</button>
       </form>
     </article>
     {% endfor %}
   </div>
 
-  <p class="cart-total">Tổng cộng: {{ total | vnd }}</p>
+  <p class="cart-total" data-cart-total="{{ total }}">
+    Tổng cộng: <span>{{ total | vnd }}</span>
+  </p>
+  {% if can_checkout %}
+  <a class="buy-product-button checkout-link" href="{{ url_for('checkout') }}">Tiến hành đặt hàng</a>
+  {% endif %}
   {% else %}
   <p>Giỏ hàng của bạn đang trống.</p>
   {% endif %}

@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ store_name }} | Đặt hàng{% endblock %}
+{% block content %}
+<section class="checkout-page">
+  <h1>Thông tin giao hàng</h1>
+  <div class="checkout-summary">
+    <h2>Đơn hàng</h2>
+    {% for item in items %}
+    <p>
+      {{ item.product_name }}{% if item.color %} · {{ item.color }}{% endif %}
+      × {{ item.quantity }}
+      <strong>{{ item.line_total | vnd }}</strong>
+    </p>
+    {% if item.engraving_text %}
+    <p><span>Khắc laser: {{ item.engraving_text }}</span></p>
+    {% endif %}
+    {% endfor %}
+    <p>Giao hàng toàn quốc <strong>Miễn phí</strong></p>
+    <p class="delivery-estimate">Thời gian dự kiến: 2–15 ngày, tùy khu vực và yêu cầu cá nhân hóa.</p>
+    <p class="cart-total" data-checkout-total="{{ total }}">
+      Tổng cộng: <span>{{ total | vnd }}</span>
+    </p>
+  </div>
+  <form class="checkout-form" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+    <label>
+      Họ và tên
+      <input type="text" name="full_name" maxlength="100" autocomplete="name" required />
+    </label>
+    <label>
+      Số điện thoại
+      <input type="tel" name="phone" maxlength="15" autocomplete="tel" required />
+    </label>
+    <label>
+      Địa chỉ giao hàng
+      <textarea name="shipping_address" maxlength="255" autocomplete="street-address" required></textarea>
+    </label>
+    <fieldset class="checkout-choice-group">
+      <legend>Phương thức thanh toán</legend>
+      <label>
+        Chọn phương thức
+        <select name="payment_method" id="payment-method" required>
+          {% for value, label in payment_choices.items() %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label id="installment-months-field" hidden>
+        Kỳ hạn trả góp
+        <select name="installment_months" id="installment-months">
+          <option value="">Chọn kỳ hạn</option>
+          <optgroup label="Thẻ tín dụng">
+            <option value="3">3 tháng</option>
+            <option value="6">6 tháng</option>
+            <option value="9">9 tháng</option>
+            <option value="12">12 tháng</option>
+          </optgroup>
+          <optgroup label="MoMo">
+            <option value="6">6 tháng</option>
+            <option value="12">12 tháng</option>
+            <option value="18">18 tháng</option>
+            <option value="24">24 tháng</option>
+          </optgroup>
+        </select>
+      </label>
+      <p id="installment-estimate" class="installment-estimate" aria-live="polite" hidden></p>
+      <p class="payment-disclaimer">
+        Đây là lựa chọn phương thức thanh toán, chưa thu tiền trực tuyến. Nhân viên sẽ xác nhận và hướng dẫn thanh toán.
+        Ước tính trả góp chưa bao gồm lãi suất hoặc phí của ngân hàng/đơn vị tài chính.
+      </p>
+    </fieldset>
+    <fieldset class="checkout-choice-group">
+      <legend>Dịch vụ thêm</legend>
+      <label class="checkout-checkbox">
+        <input type="checkbox" name="trade_in_requested" id="trade-in-requested" />
+        Tôi muốn được thẩm định thu cũ đổi mới
+      </label>
+      <label id="trade-in-device-field" hidden>
+        Thiết bị cũ cần thẩm định
+        <input
+          type="text"
+          name="trade_in_device"
+          id="trade-in-device"
+          maxlength="160"
+          placeholder="Tên máy, dung lượng và tình trạng hiện tại"
+        />
+        <small>Giá trị thu cũ sẽ được nhân viên báo sau khi thẩm định; chưa khấu trừ vào tổng tiền này.</small>
+      </label>
+      <label class="checkout-checkbox">
+        <input type="checkbox" name="consultation_requested" id="consultation-requested" />
+        Tôi muốn được tư vấn trực tuyến về sản phẩm/cấu hình
+      </label>
+      <label id="consultation-message-field" hidden>
+        Nội dung cần tư vấn (không bắt buộc)
+        <textarea name="consultation_message" maxlength="255"></textarea>
+      </label>
+      <p class="payment-disclaimer">
+        Cấu hình có thể chọn ngay là các phiên bản đang có hàng trên trang sản phẩm.
+        Nâng cấp phần cứng ngoài danh sách cần nhân viên xác nhận giá và thời gian.
+      </p>
+    </fieldset>
+    <label>
+      Ghi chú (không bắt buộc)
+      <textarea name="note" maxlength="255"></textarea>
+    </label>
+    <button class="buy-product-button" type="submit">Xác nhận đặt hàng</button>
+  </form>
+  <a class="cart-continue-shopping" href="{{ url_for('cart_page') }}">Quay lại giỏ hàng</a>
+</section>
+<script src="{{ url_for('static', filename='js/checkout.js') }}" defer></script>
+{% endblock %}

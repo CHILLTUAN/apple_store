@@ -6,7 +6,18 @@ from flask import Blueprint, abort, flash, g, redirect, render_template, request
 from werkzeug.security import generate_password_hash
 
 from database.connection import get_connection
-from database.product_repository import get_admin_products, get_home_products
+from database.order_repository import (
+    OrderNotFoundError,
+    ORDER_STATUS_OPTIONS,
+    OrderStatusTransitionError,
+    update_order_status,
+)
+from database.product_repository import (
+    MAX_HOME_PRODUCTS_PER_CATEGORY,
+    get_admin_products,
+    get_home_product_limit,
+    get_home_products,
+)
 from database.utils import rows_to_dicts
 
 
@@ -433,6 +444,7 @@ def orders():
             JOIN Users AS u ON u.user_id = o.user_id
             WHERE (? = N'' OR u.full_name LIKE N'%' + ? + N'%'
                 OR CONVERT(NVARCHAR(20), o.order_id) LIKE N'%' + ? + N'%')
+                AND o.order_status <> N'Đã hủy'
             ORDER BY o.order_date DESC, o.order_id DESC;
             """,
             (search, search, search),
@@ -445,6 +457,7 @@ def orders():
         title="Đơn hàng",
         orders=order_rows,
         statuses=ORDER_STATUSES,
+        status_options=ORDER_STATUS_OPTIONS,
         search=search,
         active_nav="orders",
     )
@@ -472,6 +485,7 @@ def order_invoice(order_id):
         cursor.execute(
             """--sql
             SELECT p.product_name, p.color, d.quantity, d.unit_price,
+                d.engraving_text,
                 d.quantity * d.unit_price AS line_total
             FROM OrderDetails AS d
             JOIN Products AS p ON p.product_id = d.product_id
@@ -500,16 +514,24 @@ def update_order_status(order_id):
     conn = get_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE Orders SET order_status = ? WHERE order_id = ?;",
-            (status, order_id),
-        )
-        if cursor.rowcount == 0:
-            abort(404)
+        update_order_status(cursor, order_id, status)
         conn.commit()
+    except OrderNotFoundError:
+        conn.rollback()
+        abort(404)
+    except OrderStatusTransitionError as error:
+        conn.rollback()
+        flash(str(error), "error")
+        return redirect(url_for("admin.orders"))
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
-    flash("Đã cập nhật trạng thái đơn hàng.", "success")
+    if status == "Đã hủy":
+        flash("Đơn hàng đã được hủy", "success")
+    else:
+        flash("Đã cập nhật trạng thái đơn hàng.", "success")
     return redirect(url_for("admin.orders"))
 
 
@@ -749,11 +771,51 @@ def vouchers():
     )
 
 
-@admin_bp.route("/settings")
+@admin_bp.route("/settings", methods=["GET", "POST"])
 def settings():
+    if request.method == "POST":
+        try:
+            product_limit = int(request.form.get("homepage_products_per_category", ""))
+        except ValueError:
+            flash("Số sản phẩm phải là số nguyên.", "error")
+            return redirect(url_for("admin.settings"))
+
+        if not 1 <= product_limit <= MAX_HOME_PRODUCTS_PER_CATEGORY:
+            flash(
+                f"Số sản phẩm phải nằm trong khoảng 1 đến {MAX_HOME_PRODUCTS_PER_CATEGORY}.",
+                "error",
+            )
+            return redirect(url_for("admin.settings"))
+
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """--sql
+                UPDATE StoreSettings
+                SET setting_value = ?
+                WHERE setting_key = N'homepage_products_per_category';
+                """,
+                (product_limit,),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError(
+                    "Không tìm thấy cài đặt số sản phẩm trang chủ. "
+                    "Hãy chạy database/sql/homepage_products_setting_migration.sql."
+                )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+        flash("Đã cập nhật số sản phẩm hiển thị trên trang chủ.", "success")
+        return redirect(url_for("admin.settings"))
+
     return render_template(
-        "admin/placeholder.html",
+        "admin/settings.html",
         title="Cài đặt hệ thống",
-        description="Tài khoản quản trị hiện tại: " + g.admin_user["username"],
+        homepage_products_per_category=get_home_product_limit(),
+        max_home_products_per_category=MAX_HOME_PRODUCTS_PER_CATEGORY,
         active_nav="settings",
     )

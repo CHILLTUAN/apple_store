@@ -4,13 +4,45 @@
 <section class="panel">
   <div class="panel-heading"><div><h2>Danh sách đơn hàng</h2><p>Tối đa 250 đơn hàng mới nhất</p></div><form class="inline-search" method="get"><input type="search" name="q" value="{{ search }}" placeholder="Mã đơn hoặc tên khách" aria-label="Tìm đơn hàng"><button class="button button-light" type="submit">Tìm</button></form></div>
   {% if orders %}
-  <div class="table-wrap"><table><thead><tr><th>Mã đơn / Ngày</th><th>Khách hàng</th><th>Địa chỉ nhận</th><th>Thanh toán</th><th>Tổng tiền</th><th>Trạng thái / Hóa đơn</th></tr></thead><tbody>
+  <div class="table-wrap"><table class="order-list-table"><thead><tr><th>Mã đơn / Ngày</th><th>Khách hàng</th><th>Địa chỉ nhận</th><th>Thanh toán</th><th>Tổng tiền</th><th>Trạng thái</th><th>Hóa đơn</th></tr></thead><tbody>
   {% for order in orders %}
   <tr>
     <td><strong>#{{ order.order_id }}</strong><small class="table-subtext">{{ order.order_date.strftime("%d/%m/%Y %H:%M") if order.order_date else "—" }}</small></td>
     <td><strong>{{ order.full_name }}</strong><small class="table-subtext">{{ order.phone or "Chưa có số điện thoại" }}</small></td>
     <td class="address-cell">{{ order.shipping_address }}</td><td>{{ order.payment_method or "—" }}</td><td class="strong">{{ order.total_amount|vnd }}</td>
-    <td><div class="order-actions"><form class="status-form" method="post" action="{{ url_for('admin.update_order_status', order_id=order.order_id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><select name="order_status" aria-label="Trạng thái đơn {{ order.order_id }}">{% for status in statuses %}<option value="{{ status }}" {% if order.order_status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}</select><button class="button button-small button-light" type="submit">Cập nhật</button></form><a class="button button-small button-light" href="{{ url_for('admin.order_invoice', order_id=order.order_id) }}">Hóa đơn</a></div></td>
+    <td>
+      <div class="order-actions">
+        {% if order.order_status == "Chờ duyệt" %}
+        <div class="approval-actions">
+          <form method="post" action="{{ url_for('admin.update_order_status', order_id=order.order_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="button button-small button-approve" type="submit" name="order_status" value="Đang chuẩn bị">Duyệt đơn</button>
+          </form>
+          <form method="post" action="{{ url_for('admin.update_order_status', order_id=order.order_id) }}" onsubmit="return confirm('Bạn có chắc muốn không duyệt và hủy đơn hàng này?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="button button-small button-danger" type="submit" name="order_status" value="Đã hủy">Không duyệt</button>
+          </form>
+        </div>
+        {% elif order.order_status == "Đang chuẩn bị" %}
+        <div class="approval-actions">
+          <span class="order-status-text">{{ order.order_status }}</span>
+          <form method="post" action="{{ url_for('admin.update_order_status', order_id=order.order_id) }}" onsubmit="return confirm('Bạn có chắc muốn hủy giao và hủy đơn hàng này?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="button button-small button-danger" type="submit" name="order_status" value="Đã hủy">Hủy giao</button>
+          </form>
+        </div>
+        {% elif status_options[order.order_status]|length > 1 %}
+        <form class="status-form" method="post" action="{{ url_for('admin.update_order_status', order_id=order.order_id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <select name="order_status" aria-label="Trạng thái đơn {{ order.order_id }}">
+            {% for status in status_options[order.order_status] %}<option value="{{ status }}" {% if order.order_status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}
+          </select>
+          <button class="button button-small button-light" type="submit">Cập nhật</button>
+        </form>
+        {% else %}<span>{{ order.order_status }}</span>{% endif %}
+      </div>
+    </td>
+    <td><a class="button button-small button-light" href="{{ url_for('admin.order_invoice', order_id=order.order_id) }}">Hóa đơn</a></td>
   </tr>
   {% endfor %}
   </tbody></table></div>

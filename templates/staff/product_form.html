@@ -1,0 +1,20 @@
+{% extends "staff/base.html" %}
+{% block staff_content %}
+<div class="page-heading"><div><p class="eyebrow"><a href="{{ url_for('sales.products') }}">SẢN PHẨM</a> / {{ "CHỈNH SỬA" if product else "THÊM MỚI" }}</p><h1>{{ title }}</h1><p class="page-subtitle">Thông tin được lưu theo các trường hiện có trong cơ sở dữ liệu.</p></div></div>
+<form class="panel form-panel" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="form-grid">
+    <label class="field field-wide">Tên sản phẩm<input name="product_name" required maxlength="200" value="{{ product.product_name if product else '' }}"></label>
+    <label class="field">Danh mục<select name="category_id" required><option value="">Chọn danh mục</option>{% for category in categories %}<option value="{{ category.category_id }}" {% if product and product.category_id == category.category_id %}selected{% endif %}>{{ category.category_name }}</option>{% endfor %}</select></label>
+    <label class="field">Giá bán (₫)<input type="number" name="price" min="0" step="0.01" required value="{{ product.price if product else '' }}"></label>
+    <label class="field">Số lượng tồn kho<input type="number" name="stock_quantity" min="0" step="1" required value="{{ product.stock_quantity if product else 0 }}"></label>
+    <label class="field">Màu sắc<input name="color" maxlength="50" value="{{ product.color if product else '' }}"></label>
+    <label class="field">RAM<input name="ram" maxlength="20" value="{{ product.ram if product else '' }}"></label>
+    <label class="field">Dung lượng lưu trữ<input name="rom" maxlength="20" value="{{ product.rom if product else '' }}"></label>
+    <label class="field">Công suất sạc<input name="charger_power" maxlength="20" value="{{ product.charger_power if product else '' }}"></label>
+    <label class="field field-wide">Đường dẫn ảnh đại diện<input name="image_url" maxlength="255" placeholder="images/products/..." value="{{ product.image_url if product else '' }}"><small>Đường dẫn tương đối trong thư mục static.</small></label>
+    <label class="field field-wide">Mô tả<textarea name="description" rows="5">{{ product.description if product else '' }}</textarea></label>
+  </div>
+  <div class="form-actions"><a class="button button-light" href="{{ url_for('sales.products') }}">Hủy</a><button class="button button-dark" type="submit">Lưu sản phẩm</button></div>
+</form>
+{% endblock %}

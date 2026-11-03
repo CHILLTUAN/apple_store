@@ -1,0 +1,21 @@
+{% extends "staff/base.html" %}
+{% block staff_content %}
+<div class="page-heading"><div><p class="eyebrow">BÁO CÁO</p><h1>Báo cáo bán hàng</h1><p class="page-subtitle">Thống kê doanh thu và sản phẩm theo thời gian tùy chọn, không tính đơn đã hủy.</p></div></div>
+<section class="panel">
+  <div class="panel-heading"><div><h2>Khoảng thời gian</h2><p>Chọn ngày bắt đầu và kết thúc</p></div>
+    <form class="inline-search" method="get"><label>Từ ngày <input type="date" name="from_date" value="{{ from_date }}" required></label><label>Đến ngày <input type="date" name="to_date" value="{{ to_date }}" required></label><button class="button button-dark" type="submit">Xem báo cáo</button></form>
+  </div>
+  <section class="stat-grid report-stat-grid">
+    <article class="stat-card"><div class="stat-card-top">Đơn hàng<span class="stat-icon">▤</span></div><strong>{{ totals.order_count }}</strong><small>Không bao gồm đơn đã hủy</small></article>
+    <article class="stat-card"><div class="stat-card-top">Doanh thu<span class="stat-icon">₫</span></div><strong>{{ totals.revenue|vnd }}</strong><small>{{ from_date }} — {{ to_date }}</small></article>
+  </section>
+</section>
+<section class="panel">
+  <div class="panel-heading"><div><h2>Doanh số theo sản phẩm</h2><p>Sắp xếp theo doanh thu giảm dần</p></div></div>
+  {% if product_sales %}
+  <div class="table-wrap"><table><thead><tr><th>Sản phẩm</th><th>Số lượng đã bán</th><th>Doanh thu</th></tr></thead><tbody>
+    {% for item in product_sales %}<tr><td class="strong">{{ item.product_name }}</td><td>{{ item.quantity_sold }}</td><td class="strong">{{ item.revenue|vnd }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="empty-state">Không có doanh số trong khoảng thời gian đã chọn.</div>{% endif %}
+</section>
+{% endblock %}
