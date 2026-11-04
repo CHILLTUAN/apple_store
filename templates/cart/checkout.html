@@ -24,19 +24,19 @@
   <form class="checkout-form" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
     <label>
-      Họ và tên
+      <span>Họ và tên <span class="required-marker" aria-hidden="true">*</span></span>
       <input type="text" name="full_name" maxlength="100" autocomplete="name" required />
     </label>
     <label>
-      Số điện thoại
+      <span>Số điện thoại <span class="required-marker" aria-hidden="true">*</span></span>
       <input type="tel" name="phone" maxlength="15" autocomplete="tel" required />
     </label>
     <label>
-      Địa chỉ giao hàng
+      <span>Địa chỉ giao hàng <span class="required-marker" aria-hidden="true">*</span></span>
       <textarea name="shipping_address" maxlength="255" autocomplete="street-address" required></textarea>
     </label>
     <fieldset class="checkout-choice-group">
-      <legend>Phương thức thanh toán</legend>
+      <legend>Phương thức thanh toán <span class="required-marker" aria-hidden="true">*</span></legend>
       <label>
         Chọn phương thức
         <select name="payment_method" id="payment-method" required>
@@ -46,7 +46,7 @@
         </select>
       </label>
       <label id="installment-months-field" hidden>
-        Kỳ hạn trả góp
+        <span>Kỳ hạn trả góp <span class="required-marker" aria-hidden="true">*</span></span>
         <select name="installment_months" id="installment-months">
           <option value="">Chọn kỳ hạn</option>
           <optgroup label="Thẻ tín dụng">
@@ -76,7 +76,7 @@
         Tôi muốn được thẩm định thu cũ đổi mới
       </label>
       <label id="trade-in-device-field" hidden>
-        Thiết bị cũ cần thẩm định
+        <span>Thiết bị cũ cần thẩm định <span class="required-marker" aria-hidden="true">*</span></span>
         <input
           type="text"
           name="trade_in_device"

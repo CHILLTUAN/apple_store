@@ -2,7 +2,18 @@ import unittest
 from datetime import datetime
 from unittest.mock import patch
 
+from werkzeug.security import generate_password_hash
+
 import app as store_app
+
+
+CUSTOMER = (
+    42,
+    "Test Customer",
+    generate_password_hash("customer-password"),
+    3,
+    True,
+)
 
 
 class CheckoutCursor:
@@ -30,8 +41,11 @@ class CheckoutCursor:
                 ("reserved_quantity",),
             ]
             self.rows = [(10, "MacBook", "Bạc", 1000, 5, 0)]
-        elif "INSERT INTO Users" in query:
-            self.row = (21,)
+        elif "SELECT user_id, full_name, password_hash, role, is_active" in query:
+            if params[0] == "CUSTOMER":
+                self.row = CUSTOMER
+        elif "UPDATE Users" in query:
+            self.rowcount = 1
         elif "INSERT INTO Orders" in query:
             self.row = (31,)
         elif "SELECT o.order_id, o.order_date, o.total_amount" in query:
@@ -122,6 +136,7 @@ class CustomerCheckoutTests(unittest.TestCase):
             current_session["csrf_token"] = "checkout-test-token"
             current_session["cart"] = {"10": 1}
             current_session["cart_engraving"] = {"10": "For Linh"}
+            current_session["customer_user_id"] = CUSTOMER[0]
 
     def test_checkout_records_installment_trade_in_consultation_and_engraving(self):
         response = self.client.post(
@@ -158,6 +173,15 @@ class CustomerCheckoutTests(unittest.TestCase):
         self.assertEqual(order_insert[3], "Test address")
         self.assertIn("thu cũ đổi mới", order_insert[4])
         self.assertIn("tư vấn trực tuyến", order_insert[4])
+        customer_update = next(
+            params
+            for query, params in self.connection.test_cursor.executions
+            if "UPDATE Users" in query
+        )
+        self.assertEqual(
+            customer_update,
+            ("Test Customer", "0912345678", "Test address", CUSTOMER[0]),
+        )
 
         detail_insert = next(
             params
@@ -165,14 +189,12 @@ class CustomerCheckoutTests(unittest.TestCase):
             if "INSERT INTO OrderDetails" in query
         )
         self.assertEqual(detail_insert[-1], "For Linh")
-        customer_insert = next(
-            params
-            for query, params in self.connection.test_cursor.executions
-            if "INSERT INTO Users" in query
-        )
-        self.assertEqual(customer_insert[0:2], ("Test Customer", "0912345678"))
-        self.assertRegex(
-            customer_insert[2], r"^guest_[0-9a-f]{32}@guest\.apple-store\.local$"
+        self.assertEqual(order_insert[0], CUSTOMER[0])
+        self.assertFalse(
+            any(
+                "INSERT INTO Users" in query
+                for query, _ in self.connection.test_cursor.executions
+            )
         )
         with self.client.session_transaction() as current_session:
             self.assertNotIn("cart", current_session)
@@ -185,6 +207,80 @@ class CustomerCheckoutTests(unittest.TestCase):
         self.assertIn(b"window.print()", receipt.data)
         self.assertIn(b"window.location.replace", receipt.data)
         self.assertIn(b"Test address", receipt.data)
+
+    def test_customer_login_redirects_back_to_product_and_confirms_success(self):
+        response = self.client.post(
+            "/login?next=/products/10",
+            data={
+                "username": "CUSTOMER",
+                "password": "customer-password",
+                "csrf_token": "checkout-test-token",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/products/10")
+        with self.client.session_transaction() as current_session:
+            self.assertEqual(current_session["customer_user_id"], CUSTOMER[0])
+            self.assertNotIn("admin_user_id", current_session)
+
+        with patch.object(store_app, "get_home_products", return_value=[]):
+            home = self.client.get("/")
+        self.assertIn("Đăng nhập thành công".encode(), home.data)
+
+    def test_guest_add_to_cart_shows_login_action_without_accessing_products(self):
+        with self.client.session_transaction() as current_session:
+            current_session.pop("customer_user_id")
+
+        with patch.object(
+            store_app,
+            "get_connection",
+            side_effect=AssertionError("Guests must be blocked before product access."),
+        ), patch.object(store_app, "get_home_products", return_value=[]):
+            response = self.client.post(
+                "/cart/items/10",
+                data={"csrf_token": "checkout-test-token"},
+                follow_redirects=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Để đặt hàng, vui lòng đăng nhập".encode(), response.data)
+        self.assertIn(b'class="flash-action"', response.data)
+        self.assertIn(">Đăng nhập</a>".encode(), response.data)
+
+    def test_guest_checkout_is_redirected_to_login_prompt(self):
+        with self.client.session_transaction() as current_session:
+            current_session.pop("customer_user_id")
+
+        with patch.object(
+            store_app,
+            "get_connection",
+            side_effect=AssertionError("Guests must not reach checkout."),
+        ):
+            response = self.client.get("/checkout")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/")
+        with self.client.session_transaction() as current_session:
+            self.assertEqual(current_session["login_next"], "/checkout")
+
+    def test_guest_cart_link_shows_login_action_and_returns_to_cart_after_login(self):
+        with self.client.session_transaction() as current_session:
+            current_session.pop("customer_user_id")
+
+        with patch.object(
+            store_app,
+            "get_connection",
+            side_effect=AssertionError("Guests must be blocked before cart access."),
+        ), patch.object(store_app, "get_home_products", return_value=[]):
+            response = self.client.get("/cart", follow_redirects=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Để đặt hàng, vui lòng đăng nhập".encode(), response.data)
+        self.assertIn(">Đăng nhập</a>".encode(), response.data)
+        self.assertIn(b'href="/login?next=', response.data)
+        with self.client.session_transaction() as current_session:
+            self.assertEqual(current_session["login_next"], "/cart")
 
     def test_receipt_requires_a_valid_signed_order_token(self):
         response = self.client.get("/orders/31/confirmation/invalid")

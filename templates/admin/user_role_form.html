@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+<div class="page-heading"><div><p class="eyebrow"><a href="{{ url_for('admin.users') }}">NGƯỜI DÙNG</a> / PHÂN QUYỀN</p><h1>Phân quyền người dùng</h1><p class="page-subtitle">Chọn vai trò truy cập cho {{ user.full_name }}.</p></div></div>
+<form class="panel form-panel" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="form-grid">
+    <label class="field field-wide">Người dùng<input value="{{ user.full_name }} ({{ user.username }})" readonly></label>
+    <label class="field field-wide">Vai trò
+      <select name="role" required>
+        <option value="1" {% if user.role == 1 %}selected{% endif %}>Quản trị viên</option>
+        <option value="2" {% if user.role == 2 %}selected{% endif %}>Nhân viên</option>
+        <option value="3" {% if user.role == 3 %}selected{% endif %}>Khách hàng</option>
+      </select>
+    </label>
+  </div>
+  <div class="form-actions"><a class="button button-light" href="{{ url_for('admin.users') }}">Hủy</a><button class="button button-dark" type="submit">Lưu phân quyền</button></div>
+</form>
+{% endblock %}

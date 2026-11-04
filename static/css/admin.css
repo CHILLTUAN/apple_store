@@ -338,6 +338,10 @@
   font-size: 11px;
 }
 
+.inline-action {
+  display: inline;
+}
+
 .stat-grid {
   margin-bottom: 24px;
   display: grid;
@@ -877,6 +881,14 @@ code {
   color: #28568b;
   background: #f0f6ff;
   font-size: 12px;
+  opacity: 1;
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+.admin-flash.is-dismissing {
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
 }
 
 .admin-flash.error {

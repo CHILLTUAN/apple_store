@@ -171,6 +171,7 @@ def dashboard():
                 o.order_status, o.payment_method
             FROM Orders AS o
             JOIN Users AS u ON u.user_id = o.user_id
+            WHERE o.order_status <> N'Đã hủy'
             ORDER BY o.order_date DESC, o.order_id DESC;
             """
         )
@@ -721,11 +722,158 @@ def edit_user(user_id):
     return _render_user_form(user)
 
 
+@admin_bp.route("/users/<int:user_id>/permissions", methods=["GET", "POST"])
+def set_user_role(user_id):
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """--sql
+            SELECT user_id, full_name, username, role, is_active
+            FROM Users WHERE user_id = ?;
+            """,
+            (user_id,),
+        )
+        user = cursor.fetchone()
+        if not user:
+            abort(404)
+
+        if request.method == "POST":
+            try:
+                role = int(request.form.get("role", ""))
+                if role not in (1, 2, 3):
+                    raise ValueError
+            except ValueError:
+                flash("Vai trò người dùng không hợp lệ.", "error")
+            else:
+                if user_id == g.admin_user["user_id"] and role != 1:
+                    flash("Không thể gỡ quyền quản trị của tài khoản đang sử dụng.", "error")
+                else:
+                    if user[3] == 1 and user[4] and role != 1:
+                        cursor.execute(
+                            """--sql
+                            SELECT COUNT(*) FROM Users
+                            WHERE role = 1 AND is_active = 1 AND user_id <> ?;
+                            """,
+                            (user_id,),
+                        )
+                        if cursor.fetchone()[0] == 0:
+                            flash(
+                                "Không thể gỡ quyền quản trị viên cuối cùng.",
+                                "error",
+                            )
+                            return _render_user_role_form(user)
+
+                    cursor.execute(
+                        "UPDATE Users SET role = ? WHERE user_id = ?;",
+                        (role, user_id),
+                    )
+                    conn.commit()
+                    flash("Đã cập nhật phân quyền người dùng.", "success")
+                    return redirect(url_for("admin.users"))
+    finally:
+        conn.close()
+
+    return _render_user_role_form(user)
+
+
+@admin_bp.route("/users/<int:user_id>/delete", methods=["POST"])
+def delete_user(user_id):
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT user_id, role, is_active, username FROM Users WHERE user_id = ?;",
+            (user_id,),
+        )
+        user = cursor.fetchone()
+        if not user:
+            abort(404)
+        if user_id == g.admin_user["user_id"]:
+            flash("Không thể xóa tài khoản quản trị đang sử dụng.", "error")
+            return redirect(url_for("admin.users"))
+
+        if user[1] == 1 and user[2]:
+            cursor.execute(
+                """--sql
+                SELECT COUNT(*) FROM Users
+                WHERE role = 1 AND is_active = 1 AND user_id <> ?;
+                """,
+                (user_id,),
+            )
+            if cursor.fetchone()[0] == 0:
+                flash("Không thể xóa quản trị viên cuối cùng.", "error")
+                return redirect(url_for("admin.users"))
+
+        cursor.execute(
+            """--sql
+            SELECT COUNT(*) FROM Orders
+            WHERE user_id = ?
+                AND (order_status IS NULL OR order_status <> N'Đã hủy');
+            """,
+            (user_id,),
+        )
+        if cursor.fetchone()[0]:
+            flash("Không thể xóa người dùng đã có đơn hàng.", "error")
+            return redirect(url_for("admin.users"))
+
+        cursor.execute(
+            """--sql
+            SELECT COUNT(*) FROM Orders
+            WHERE user_id = ? AND order_status = N'Đã hủy';
+            """,
+            (user_id,),
+        )
+        cancelled_order_count = cursor.fetchone()[0]
+        if cancelled_order_count:
+            if not user[3].startswith("guest_"):
+                flash("Không thể xóa người dùng đã có đơn hàng.", "error")
+                return redirect(url_for("admin.users"))
+
+            cursor.execute(
+                """--sql
+                DELETE details
+                FROM OrderDetails AS details
+                JOIN Orders AS orders ON orders.order_id = details.order_id
+                WHERE orders.user_id = ? AND orders.order_status = N'Đã hủy';
+                """,
+                (user_id,),
+            )
+            cursor.execute(
+                "DELETE FROM Orders WHERE user_id = ? AND order_status = N'Đã hủy';",
+                (user_id,),
+            )
+
+        cursor.execute("DELETE FROM Users WHERE user_id = ?;", (user_id,))
+        conn.commit()
+        flash("Đã xóa người dùng.", "success")
+        return redirect(url_for("admin.users"))
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def _render_user_form(user):
     return render_template(
         "admin/user_form.html",
         title="Chỉnh sửa người dùng",
         user=user,
+        active_nav="users",
+    )
+
+
+def _render_user_role_form(user):
+    return render_template(
+        "admin/user_role_form.html",
+        title="Phân quyền người dùng",
+        user={
+            "user_id": user[0],
+            "full_name": user[1],
+            "username": user[2],
+            "role": user[3],
+        },
         active_nav="users",
     )
 

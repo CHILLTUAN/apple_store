@@ -39,6 +39,16 @@ def format_vnd(price):
 # Đăng ký hàm thành filter để Jinja có thể sử dụng trong template.
 app.jinja_env.filters["vnd"] = format_vnd
 
+
+def _require_customer_login(next_url, return_url):
+    if session.get("customer_user_id") is not None:
+        return None
+
+    session["login_next"] = next_url
+    flash("Để đặt hàng, vui lòng đăng nhập tài khoản của bạn.", "login_required")
+    return redirect(return_url)
+
+
 @app.context_processor 
 # Đăng ký hàm cung cấp biến dùng chung cho template
 def provide_categories():
@@ -53,7 +63,9 @@ def provide_categories():
 def protect_authentication_forms():
     protected_form_endpoints = {
         "login",
+        "register",
         "logout",
+        "edit_customer_account",
         "add_to_cart",
         "remove_from_cart",
         "update_cart_quantity",
@@ -273,6 +285,13 @@ def product_detail(product_id):
 
 @app.route("/cart")
 def cart_page():
+    login_redirect = _require_customer_login(
+        url_for("cart_page"),
+        url_for("home"),
+    )
+    if login_redirect:
+        return login_redirect
+
     cart = session.get("cart", {})
     if not cart:
         return render_template("cart/index.html", store_name="Apple Store", items=[], total=0)
@@ -339,6 +358,13 @@ def cart_page():
 
 @app.post("/cart/items/<int:product_id>")
 def add_to_cart(product_id):
+    login_redirect = _require_customer_login(
+        url_for("product_detail", product_id=product_id),
+        url_for("home"),
+    )
+    if login_redirect:
+        return login_redirect
+
     conn = get_connection()
     try:
         cursor = conn.cursor()
@@ -395,6 +421,13 @@ def add_to_cart(product_id):
 
 @app.post("/cart/items/<int:product_id>/remove")
 def remove_from_cart(product_id):
+    login_redirect = _require_customer_login(
+        url_for("cart_page"),
+        url_for("home"),
+    )
+    if login_redirect:
+        return login_redirect
+
     cart = session.get("cart", {})
     product_key = str(product_id)
     cart.pop(product_key, None)
@@ -407,6 +440,13 @@ def remove_from_cart(product_id):
 
 @app.post("/cart/items/<int:product_id>/quantity")
 def update_cart_quantity(product_id):
+    login_redirect = _require_customer_login(
+        url_for("cart_page"),
+        url_for("home"),
+    )
+    if login_redirect:
+        return login_redirect
+
     try:
         quantity = int(request.form.get("quantity", ""))
     except ValueError:
@@ -445,6 +485,13 @@ def update_cart_quantity(product_id):
 
 @app.route("/checkout", methods=["GET", "POST"])
 def checkout():
+    login_redirect = _require_customer_login(
+        url_for("checkout"),
+        url_for("home"),
+    )
+    if login_redirect:
+        return login_redirect
+
     cart = session.get("cart", {})
     if not cart:
         flash("Giỏ hàng của bạn đang trống.", "error")
@@ -604,27 +651,22 @@ def checkout():
             order_notes.append(consultation_note)
         note = "\n".join(order_notes) or None
 
-        guest_username = f"guest_{secrets.token_hex(16)}"
-        guest_email = f"{guest_username}@guest.apple-store.local"
-        guest_password = generate_password_hash(secrets.token_urlsafe(32))
         cursor.execute(
             """--sql
-            INSERT INTO Users (
-                full_name, phone, email, address, username, password_hash, role, is_active
-            )
-            OUTPUT INSERTED.user_id
-            VALUES (?, ?, ?, ?, ?, ?, 3, 1);
+            UPDATE Users
+            SET full_name = ?, phone = ?, address = ?
+            WHERE user_id = ? AND role = 3 AND is_active = 1;
             """,
             (
                 full_name,
                 phone,
-                guest_email,
                 shipping_address,
-                guest_username,
-                guest_password,
+                session["customer_user_id"],
             ),
         )
-        user_id = cursor.fetchone()[0]
+        if cursor.rowcount != 1:
+            abort(409, description="Tài khoản khách hàng không còn khả dụng.")
+
         cursor.execute(
             """--sql
             INSERT INTO Orders (
@@ -634,7 +676,13 @@ def checkout():
             OUTPUT INSERTED.order_id
             VALUES (?, ?, ?, ?, 0, ?, 0);
             """,
-            (user_id, total, payment_method, shipping_address, note),
+            (
+                session["customer_user_id"],
+                total,
+                payment_method,
+                shipping_address,
+                note,
+            ),
         )
         order_id = cursor.fetchone()[0]
         for product, quantity, engraving_text in items:
@@ -745,14 +793,14 @@ def login():
 
         if (
             user
-            and user[3] in (1, 2)
+            and user[3] in (1, 2, 3)
             and user[4]
             and check_password_hash(user[2], password)
         ):
             session.pop("csrf_token", None)
             session.pop("admin_user_id", None)
             session.pop("sales_staff_id", None)
-            session["admin_user_id" if user[3] == 1 else "sales_staff_id"] = user[0]
+            session.pop("customer_user_id", None)
             session.permanent = request.form.get("remember_me") == "on"
             next_url = request.args.get("next", "")
             parsed_next_url = urlsplit(next_url)
@@ -763,6 +811,19 @@ def login():
                 and not parsed_next_url.netloc
                 and not parsed_next_url.scheme
             )
+            if user[3] == 3:
+                session["customer_user_id"] = user[0]
+                flash("Đăng nhập thành công. Bạn có thể tiếp tục mua sắm.", "success")
+                session.pop("login_next", None)
+                if safe_next_url and (
+                    next_url == url_for("cart_page")
+                    or next_url == url_for("checkout")
+                    or re.fullmatch(r"/products/\d+", next_url)
+                ):
+                    return redirect(next_url)
+                return redirect(url_for("home"))
+
+            session["admin_user_id" if user[3] == 1 else "sales_staff_id"] = user[0]
             if user[3] == 2:
                 if safe_next_url and (
                     next_url == "/staff" or next_url.startswith("/staff/")
@@ -774,8 +835,7 @@ def login():
             return redirect(url_for("admin.dashboard"))
 
         flash(
-            "Thông tin đăng nhập không hợp lệ hoặc tài khoản không có quyền "
-            "quản trị hay nhân viên bán hàng.",
+            "Tên đăng nhập hoặc mật khẩu không hợp lệ, hoặc tài khoản chưa được kích hoạt.",
             "error",
         )
 
@@ -789,9 +849,151 @@ def login():
 def logout():
     session.pop("admin_user_id", None)
     session.pop("sales_staff_id", None)
+    session.pop("customer_user_id", None)
+    session.pop("login_next", None)
     session.pop("csrf_token", None)
     flash("Bạn đã đăng xuất.", "success")
     return redirect(url_for("login"))
+
+
+def _load_customer_profile():
+    customer_id = session.get("customer_user_id")
+    if customer_id is None:
+        return None
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """--sql
+            SELECT user_id, full_name, phone, email, address, username
+            FROM Users
+            WHERE user_id = ? AND role = 3 AND is_active = 1;
+            """,
+            (customer_id,),
+        )
+        row = cursor.fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        session.pop("customer_user_id", None)
+        return None
+
+    return {
+        "user_id": row[0],
+        "full_name": row[1],
+        "phone": row[2],
+        "email": row[3],
+        "address": row[4],
+        "username": row[5],
+    }
+
+
+@app.get("/account")
+def customer_account():
+    customer = _load_customer_profile()
+    if not customer:
+        flash("Vui lòng đăng nhập để xem thông tin tài khoản.", "error")
+        return redirect(url_for("login"))
+
+    return render_template(
+        "account/profile.html",
+        store_name="Apple Store",
+        customer=customer,
+    )
+
+
+@app.route("/account/edit", methods=["GET", "POST"])
+def edit_customer_account():
+    customer = _load_customer_profile()
+    if not customer:
+        flash("Vui lòng đăng nhập để chỉnh sửa tài khoản.", "error")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        full_name = request.form.get("full_name", "").strip()
+        phone = request.form.get("phone", "").strip() or None
+        email = request.form.get("email", "").strip() or None
+        address = request.form.get("address", "").strip() or None
+        customer.update(
+            full_name=full_name,
+            phone=phone,
+            email=email,
+            address=address,
+        )
+
+        if (
+            not full_name
+            or len(full_name) > 100
+            or (phone and (
+                len(phone) > 15
+                or not re.fullmatch(r"[0-9+()\- ]+", phone)
+                or not 7 <= sum(character.isdigit() for character in phone) <= 15
+            ))
+            or (email and (
+                len(email) > 100
+                or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
+            ))
+            or (address and len(address) > 255)
+        ):
+            flash("Vui lòng kiểm tra lại thông tin cá nhân.", "error")
+            return render_template(
+                "account/edit.html",
+                store_name="Apple Store",
+                customer=customer,
+            )
+
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            if email:
+                cursor.execute(
+                    """--sql
+                    SELECT user_id FROM Users
+                    WHERE email = ? AND user_id <> ?;
+                    """,
+                    (email, customer["user_id"]),
+                )
+                if cursor.fetchone():
+                    flash("Email này đã được sử dụng bởi tài khoản khác.", "error")
+                    return render_template(
+                        "account/edit.html",
+                        store_name="Apple Store",
+                        customer=customer,
+                    )
+
+            cursor.execute(
+                """--sql
+                UPDATE Users
+                SET full_name = ?, phone = ?, email = ?, address = ?
+                WHERE user_id = ? AND role = 3 AND is_active = 1;
+                """,
+                (
+                    full_name,
+                    phone,
+                    email,
+                    address,
+                    customer["user_id"],
+                ),
+            )
+            if cursor.rowcount != 1:
+                abort(409, description="Tài khoản khách hàng không còn khả dụng.")
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+        flash("Thông tin cá nhân đã được cập nhật.", "success")
+        return redirect(url_for("customer_account"))
+
+    return render_template(
+        "account/edit.html",
+        store_name="Apple Store",
+        customer=customer,
+    )
 
 
 @app.cli.command("create-admin")
@@ -832,12 +1034,97 @@ def create_admin():
     click.echo("Tài khoản quản trị đã được tạo.")
 
 
-@app.route("/register")
+@app.route("/register", methods=["GET", "POST"])
 def register():
+    if request.method == "POST":
+        full_name = request.form.get("full_name", "").strip()
+        phone = request.form.get("phone", "").strip()
+        email = request.form.get("email", "").strip() or None
+        address = request.form.get("address", "").strip() or None
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if (
+            not full_name
+            or len(full_name) > 100
+            or not username
+            or len(username) > 50
+            or (phone and (
+                len(phone) > 15
+                or not re.fullmatch(r"[0-9+()\- ]+", phone)
+                or not 7 <= sum(character.isdigit() for character in phone) <= 15
+            ))
+            or (email and (
+                len(email) > 100
+                or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
+            ))
+            or (address and len(address) > 255)
+            or len(password) < 8
+            or password != confirm_password
+        ):
+            flash("Vui lòng kiểm tra lại thông tin đăng ký.", "error")
+            return render_template(
+                "auth/register.html",
+                store_name="Apple Store",
+                csrf_token=session.get("csrf_token", ""),
+            )
+
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            if email:
+                cursor.execute(
+                    """--sql
+                    SELECT user_id FROM Users
+                    WHERE username = ? OR email = ?;
+                    """,
+                    (username, email),
+                )
+            else:
+                cursor.execute(
+                    "SELECT user_id FROM Users WHERE username = ?;",
+                    (username,),
+                )
+            if cursor.fetchone():
+                flash("Tên đăng nhập hoặc email đã được sử dụng.", "error")
+                return render_template(
+                    "auth/register.html",
+                    store_name="Apple Store",
+                    csrf_token=session.get("csrf_token", ""),
+                )
+
+            cursor.execute(
+                """--sql
+                INSERT INTO Users (
+                    full_name, phone, email, address, username, password_hash,
+                    role, is_active
+                )
+                VALUES (?, ?, ?, ?, ?, ?, 3, 1);
+                """,
+                (
+                    full_name,
+                    phone or None,
+                    email,
+                    address,
+                    username,
+                    generate_password_hash(password),
+                ),
+            )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+        flash("Đăng ký thành công. Vui lòng đăng nhập để tiếp tục.", "success")
+        return redirect(url_for("login"))
+
     return render_template(
         "auth/register.html",
         store_name="Apple Store",
-        message="Flask đã kết nối với HTML thành công!"
+        csrf_token=session.get("csrf_token", ""),
     )
 
 

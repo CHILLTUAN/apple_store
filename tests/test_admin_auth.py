@@ -8,6 +8,8 @@ from routes import admin as admin_routes
 
 
 class FakeCursor:
+    executed_queries = []
+
     def __init__(self):
         self.row = None
         self.rows = []
@@ -15,6 +17,7 @@ class FakeCursor:
         self.rowcount = 0
 
     def execute(self, query, params=()):
+        self.executed_queries.append(query)
         self.row = None
         self.rows = []
         self.description = []
@@ -62,6 +65,73 @@ class FakeConnection:
         pass
 
 
+class UserActionCursor:
+    executions = []
+    user_to_delete = (2, 3, True, "customer")
+    active_order_count = 0
+    cancelled_order_count = 0
+
+    def __init__(self):
+        self.row = None
+        self.rows = []
+        self.description = []
+
+    def execute(self, query, params=()):
+        self.executions.append((query, params))
+        self.row = None
+        self.rows = []
+        self.description = []
+        if "SELECT user_id, full_name, username, role, is_active" in query:
+            self.row = USERS_BY_ID.get(params[0])
+        elif "SELECT user_id, role, is_active FROM Users" in query:
+            self.row = (2, 3, True)
+        elif "SELECT user_id, role, is_active, username FROM Users" in query:
+            self.row = self.user_to_delete
+        elif "SELECT user_id, full_name, phone, email, username, role" in query:
+            self.description = [
+                (name,)
+                for name in (
+                    "user_id",
+                    "full_name",
+                    "phone",
+                    "email",
+                    "username",
+                    "role",
+                    "is_active",
+                    "created_at",
+                )
+            ]
+            self.rows = [(2, "Store Customer", None, None, "customer", 3, True, None)]
+        elif "SELECT COUNT(*) FROM Users" in query:
+            self.row = (1,)
+        elif "SELECT COUNT(*) FROM Orders" in query:
+            self.row = (
+                self.cancelled_order_count
+                if "order_status = N'Đã hủy'" in query
+                else self.active_order_count,
+            )
+
+    def fetchone(self):
+        return self.row
+
+    def fetchall(self):
+        return self.rows
+
+
+class UserActionConnection:
+    def cursor(self):
+        return UserActionCursor()
+
+    def commit(self):
+        pass
+
+    def rollback(self):
+        pass
+
+    def close(self):
+        pass
+
+
 ADMIN_PASSWORD_HASH = generate_password_hash("correct-horse-battery")
 CUSTOMER_PASSWORD_HASH = generate_password_hash("customer-password")
 USERS_BY_USERNAME = {
@@ -76,6 +146,11 @@ USERS_BY_ID = {
 
 class AdminAuthenticationTests(unittest.TestCase):
     def setUp(self):
+        FakeCursor.executed_queries = []
+        UserActionCursor.executions = []
+        UserActionCursor.user_to_delete = (2, 3, True, "customer")
+        UserActionCursor.active_order_count = 0
+        UserActionCursor.cancelled_order_count = 0
         store_app.app.config.update(TESTING=True, SECRET_KEY="test-secret")
         self.client = store_app.app.test_client()
         self.categories_patch = patch.object(store_app, "get_categories", return_value=[])
@@ -123,8 +198,12 @@ class AdminAuthenticationTests(unittest.TestCase):
         self.assertEqual(dashboard.status_code, 200)
         self.assertIn(b"Doanh thu h\xc3\xb4m nay", dashboard.data)
         self.assertIn(b"Store Admin", dashboard.data)
+        recent_orders_query = next(
+            query for query in FakeCursor.executed_queries if "SELECT TOP 8" in query
+        )
+        self.assertIn("WHERE o.order_status <> N'Đã hủy'", recent_orders_query)
 
-    def test_customer_account_cannot_log_in_to_admin(self):
+    def test_customer_login_does_not_grant_admin_access(self):
         response = self.client.post(
             "/login",
             data={
@@ -133,8 +212,15 @@ class AdminAuthenticationTests(unittest.TestCase):
                 "csrf_token": self._csrf_token(),
             },
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b"kh\xc3\xb4ng c\xc3\xb3 quy\xe1\xbb\x81n qu\xe1\xba\xa3n tr\xe1\xbb\x8b", response.data)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/")
+        with self.client.session_transaction() as current_session:
+            self.assertIn("customer_user_id", current_session)
+            self.assertNotIn("admin_user_id", current_session)
+
+        admin_page = self.client.get("/admin/")
+        self.assertEqual(admin_page.status_code, 302)
+        self.assertTrue(admin_page.headers["Location"].startswith("/login?next="))
 
     def test_admin_pages_require_a_signed_in_account(self):
         response = self.client.get("/admin/")
@@ -143,9 +229,91 @@ class AdminAuthenticationTests(unittest.TestCase):
 
     def test_user_management_page_renders(self):
         self._login_admin()
-        response = self.client.get("/admin/users")
+        with patch.object(
+            admin_routes, "get_connection", side_effect=UserActionConnection
+        ):
+            response = self.client.get("/admin/users")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Th\xc3\xaam ng\xc6\xb0\xe1\xbb\x9di d\xc3\xb9ng", response.data)
+        self.assertIn(b"Ph\xc3\xa2n quy\xe1\xbb\x81n", response.data)
+        self.assertIn(b"X\xc3\xb3a", response.data)
+
+    def test_user_can_be_assigned_a_role(self):
+        self._login_admin()
+        csrf_token = self._csrf_token()
+        with patch.object(
+            admin_routes, "get_connection", side_effect=UserActionConnection
+        ):
+            response = self.client.post(
+                "/admin/users/2/permissions",
+                data={"csrf_token": csrf_token, "role": "2"},
+            )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            any("UPDATE Users SET role = ?" in query for query, _ in UserActionCursor.executions)
+        )
+
+    def test_user_without_orders_can_be_deleted(self):
+        self._login_admin()
+        csrf_token = self._csrf_token()
+        with patch.object(
+            admin_routes, "get_connection", side_effect=UserActionConnection
+        ):
+            response = self.client.post(
+                "/admin/users/2/delete",
+                data={"csrf_token": csrf_token},
+            )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            any("DELETE FROM Users" in query for query, _ in UserActionCursor.executions)
+        )
+
+    def test_guest_with_only_cancelled_orders_is_deleted_with_order_history(self):
+        UserActionCursor.user_to_delete = (2, 3, True, "guest_0123456789")
+        UserActionCursor.cancelled_order_count = 2
+        self._login_admin()
+        csrf_token = self._csrf_token()
+
+        with patch.object(
+            admin_routes, "get_connection", side_effect=UserActionConnection
+        ):
+            response = self.client.post(
+                "/admin/users/2/delete",
+                data={"csrf_token": csrf_token},
+            )
+
+        self.assertEqual(response.status_code, 302)
+        executed_queries = [query for query, _ in UserActionCursor.executions]
+        self.assertTrue(any("DELETE details" in query for query in executed_queries))
+        self.assertTrue(
+            any("DELETE FROM Orders WHERE user_id" in query for query in executed_queries)
+        )
+        self.assertTrue(any("DELETE FROM Users" in query for query in executed_queries))
+
+    def test_guest_with_active_orders_cannot_be_deleted(self):
+        UserActionCursor.user_to_delete = (2, 3, True, "guest_0123456789")
+        UserActionCursor.active_order_count = 1
+        self._login_admin()
+        csrf_token = self._csrf_token()
+
+        with patch.object(
+            admin_routes, "get_connection", side_effect=UserActionConnection
+        ):
+            response = self.client.post(
+                "/admin/users/2/delete",
+                data={"csrf_token": csrf_token},
+                follow_redirects=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            b"Kh\xc3\xb4ng th\xe1\xbb\x83 x\xc3\xb3a ng\xc6\xb0\xe1\xbb\x9di d\xc3\xb9ng "
+            b"\xc4\x91\xc3\xa3 c\xc3\xb3 \xc4\x91\xc6\xa1n h\xc3\xa0ng.",
+            response.data,
+        )
+        self.assertFalse(
+            any("DELETE FROM Users" in query for query, _ in UserActionCursor.executions)
+        )
 
     def test_login_requires_csrf_token(self):
         response = self.client.post(

@@ -4,9 +4,23 @@
 <section class="panel">
   <div class="panel-heading"><div><h2>Danh sách tài khoản</h2><p>{{ users|length }} tài khoản</p></div><form class="inline-search" method="get"><input type="search" name="q" value="{{ search }}" placeholder="Tên hoặc tên đăng nhập" aria-label="Tìm người dùng"><button class="button button-light" type="submit">Tìm</button></form></div>
   {% if users %}
-  <div class="table-wrap"><table><thead><tr><th>Người dùng</th><th>Tên đăng nhập</th><th>Liên hệ</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr></thead><tbody>
+  <div class="table-wrap"><table><thead><tr><th>Người dùng</th><th>Tên đăng nhập</th><th>Liên hệ</th><th>Vai trò</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
   {% for user in users %}
-  <tr><td><strong>{{ user.full_name }}</strong><small class="table-subtext">Tạo ngày {{ user.created_at.strftime("%d/%m/%Y") if user.created_at else "—" }}</small></td><td><code>{{ user.username }}</code></td><td>{{ user.email or user.phone or "—" }}</td><td>{{ {1: "Quản trị viên", 2: "Nhân viên", 3: "Khách hàng"}.get(user.role, "Khác") }}</td><td><span class="status-pill {{ 'status-green' if user.is_active else 'status-muted' }}">{{ "Đang hoạt động" if user.is_active else "Đã khóa" }}</span></td><td><a class="button button-small button-light" href="{{ url_for('admin.edit_user', user_id=user.user_id) }}">Sửa</a></td></tr>
+  <tr>
+    <td><strong>{{ user.full_name }}</strong><small class="table-subtext">Tạo ngày {{ user.created_at.strftime("%d/%m/%Y") if user.created_at else "—" }}</small></td>
+    <td><code>{{ user.username }}</code></td>
+    <td>{{ user.email or user.phone or "—" }}</td>
+    <td>{{ {1: "Quản trị viên", 2: "Nhân viên", 3: "Khách hàng"}.get(user.role, "Khác") }}</td>
+    <td><span class="status-pill {{ 'status-green' if user.is_active else 'status-muted' }}">{{ "Đang hoạt động" if user.is_active else "Đã khóa" }}</span></td>
+    <td>
+      <a class="button button-small button-light" href="{{ url_for('admin.edit_user', user_id=user.user_id) }}">Sửa</a>
+      <a class="button button-small button-light" href="{{ url_for('admin.set_user_role', user_id=user.user_id) }}">Phân quyền</a>
+      <form class="inline-action" method="post" action="{{ url_for('admin.delete_user', user_id=user.user_id) }}" onsubmit="return confirm('Bạn có chắc muốn xóa người dùng này?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="button button-small button-danger" type="submit">Xóa</button>
+      </form>
+    </td>
+  </tr>
   {% endfor %}
   </tbody></table></div>
   {% else %}<div class="empty-state">Chưa có tài khoản phù hợp.</div>{% endif %}

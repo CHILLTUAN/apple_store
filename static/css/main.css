@@ -58,6 +58,21 @@ main {
     transform 0.3s ease;
 }
 
+.flash-action {
+  display: inline-block;
+  margin-left: 12px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  background-color: #0071e3;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.flash-action:hover {
+  background-color: #005bb5;
+}
+
 .flash-message.is-dismissing {
   opacity: 0;
   transform: translateY(-8px);
@@ -443,6 +458,100 @@ main {
   opacity: 0.55;
 }
 
+.customer-account {
+  width: min(100%, 640px);
+  padding: 28px;
+  border: 1px solid #d2d2d7;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.customer-profile {
+  display: grid;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.customer-profile div {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) 2fr;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #d2d2d7;
+}
+
+.customer-profile dt {
+  color: #6e6e73;
+}
+
+.customer-profile dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.customer-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.customer-account-actions form {
+  flex: 1;
+}
+
+.customer-account-actions .buy-product-button,
+.customer-logout-button,
+.customer-cancel-button {
+  display: inline-flex;
+  width: 100%;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.customer-account-actions .buy-product-button {
+  flex: 1;
+}
+
+.customer-logout-button {
+  background: #f5f5f7;
+  color: #b42318;
+}
+
+.customer-logout-button:hover,
+.customer-cancel-button:hover {
+  background: #e8e8ed;
+}
+
+.customer-cancel-button {
+  flex: 1;
+  background: #f5f5f7;
+  color: #1d1d1f;
+}
+
+.customer-profile-form {
+  display: grid;
+  gap: 10px;
+}
+
+.customer-profile-form input {
+  min-height: 44px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  font: inherit;
+}
+
 .stock-warning {
   color: #b42318;
   font-weight: 600;
@@ -492,14 +601,6 @@ main {
 
 .cart-quantity-form input {
   width: 84px;
-}
-
-.cart-quantity-form button {
-  padding: 8px 12px;
-  border: 1px solid #d2d2d7;
-  border-radius: 8px;
-  background: #fff;
-  cursor: pointer;
 }
 
 .cart-quantity-form span {
@@ -791,6 +892,11 @@ main {
 .checkout-form {
   display: grid;
   gap: 16px;
+}
+
+.required-marker {
+  color: #c62828;
+  font-weight: 700;
 }
 
 .checkout-form textarea {

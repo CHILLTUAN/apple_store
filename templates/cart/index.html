@@ -26,7 +26,7 @@
         <p>Đơn giá: {{ item.price | vnd }}</p>
         {% if not item.stock_available %}
         <p class="stock-warning">
-          {% if item.stock_quantity > 0 %}Chỉ còn {{ item.stock_quantity }} sản phẩm. Vui lòng cập nhật số lượng.{% else %}Sản phẩm đã hết hàng. Vui lòng xóa khỏi giỏ.{% endif %}
+          {% if item.stock_quantity > 0 %}Chỉ còn {{ item.stock_quantity }} sản phẩm. Vui lòng chọn số lượng mới.{% else %}Sản phẩm đã hết hàng. Vui lòng xóa khỏi giỏ.{% endif %}
         </p>
         {% endif %}
         <form
@@ -47,7 +47,7 @@
             required
             data-unit-price="{{ item.price }}"
           />
-          <button type="submit">Cập nhật</button>
+          <span class="cart-quantity-status" aria-live="polite"></span>
           {% else %}
           <span>Số lượng: {{ item.quantity }} · Hết hàng</span>
           {% endif %}

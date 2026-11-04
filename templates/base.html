@@ -97,7 +97,11 @@
             />
           </button>
 
-          <a href="{{ url_for('login') }}" class="login-link" aria-label="Đăng nhập hoặc vào trang quản trị" title="Đăng nhập / Quản trị"
+          <a
+            href="{{ url_for('customer_account') if session.get('customer_user_id') else url_for('login') }}"
+            class="login-link"
+            aria-label="{{ 'Tài khoản của tôi' if session.get('customer_user_id') else 'Đăng nhập hoặc vào trang quản trị' }}"
+            title="{{ 'Tài khoản của tôi' if session.get('customer_user_id') else 'Đăng nhập / Quản trị' }}"
             ><img
               src="{{ url_for('static', filename='images/icons/person.png') }}"
               alt=""
@@ -167,7 +171,15 @@
       {% if messages %}
       <div class="flash-messages" role="status" aria-live="polite">
         {% for category, message in messages %}
-        <p class="flash-message flash-{{ category }}">{{ message }}</p>
+        <p class="flash-message flash-{{ category }}">
+          {{ message }}
+          {% if category == "login_required" and request.endpoint != "login" %}
+          <a
+            class="flash-action"
+            href="{{ url_for('login', next=session.get('login_next')) }}"
+          >Đăng nhập</a>
+          {% endif %}
+        </p>
         {% endfor %}
       </div>
       {% endif %}

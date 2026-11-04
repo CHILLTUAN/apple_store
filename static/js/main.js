@@ -194,5 +194,16 @@ if (cartQuantityInputs.length) {
 
   cartQuantityInputs.forEach((input) => {
     input.addEventListener("input", updateCartTotals);
+    input.addEventListener("change", () => {
+      if (!input.form || !input.reportValidity()) {
+        return;
+      }
+
+      const status = input.form.querySelector(".cart-quantity-status");
+      if (status) {
+        status.textContent = "Đang cập nhật…";
+      }
+      input.form.requestSubmit();
+    });
   });
 }
