@@ -16,7 +16,6 @@ from database.product_repository import (
     MAX_HOME_PRODUCTS_PER_CATEGORY,
     get_admin_products,
     get_home_product_limit,
-    get_home_products,
 )
 from database.utils import rows_to_dicts
 
@@ -50,6 +49,20 @@ def load_admin():
         session.pop("admin_user_id", None)
         flash("Tài khoản không còn quyền truy cập trang quản trị.", "error")
         return redirect(url_for("login"))
+
+    unavailable_admin_tasks = {
+        "admin.new_product",
+        "admin.edit_product",
+        "admin.delete_product",
+        "admin.set_product_visibility",
+        "admin.categories",
+        "admin.edit_category",
+        "admin.orders",
+        "admin.order_invoice",
+        "admin.update_order_status",
+    }
+    if request.endpoint in unavailable_admin_tasks:
+        abort(404)
 
     g.admin_user = {
         "user_id": user[0],
@@ -148,9 +161,7 @@ def dashboard():
         cursor.execute(
             """--sql
             SELECT
-                (SELECT COUNT(*) FROM Orders WHERE order_status <> N'Đã hủy') AS total_orders,
                 (SELECT COUNT(*) FROM Users WHERE role = 3 AND is_active = 1) AS customers,
-                (SELECT COUNT(*) FROM Orders WHERE order_status = N'Chờ duyệt') AS pending_orders,
                 (SELECT ISNULL(SUM(total_amount), 0) FROM Orders
                     WHERE order_status <> N'Đã hủy'
                     AND CAST(order_date AS DATE) = CAST(GETDATE() AS DATE)) AS revenue_today,
@@ -164,18 +175,7 @@ def dashboard():
             """
         )
         stats = rows_to_dicts(cursor)[0]
-        storefront_product_count = len(get_home_products())
-        cursor.execute(
-            """--sql
-            SELECT TOP 8 o.order_id, u.full_name, o.order_date, o.total_amount,
-                o.order_status, o.payment_method
-            FROM Orders AS o
-            JOIN Users AS u ON u.user_id = o.user_id
-            WHERE o.order_status <> N'Đã hủy'
-            ORDER BY o.order_date DESC, o.order_id DESC;
-            """
-        )
-        recent_orders = rows_to_dicts(cursor)
+        products = get_admin_products(include_all=True)
         cursor.execute(
             """--sql
             SELECT
@@ -202,8 +202,8 @@ def dashboard():
         "admin/dashboard.html",
         title="Tổng quan",
         stats=stats,
-        storefront_product_count=storefront_product_count,
-        recent_orders=recent_orders,
+        product_count=len(products),
+        total_stock=sum(product["stock_quantity"] for product in products),
         monthly_revenue=monthly_revenue,
         revenue_max=max((item["revenue"] for item in monthly_revenue), default=0),
         active_nav="dashboard",
@@ -213,14 +213,14 @@ def dashboard():
 @admin_bp.route("/products")
 def products():
     search = request.args.get("q", "").strip()
-    include_all = request.args.get("all") == "1"
-    product_rows = get_admin_products(search, include_all=include_all)
+    product_rows = get_admin_products(search, include_all=True)
     return render_template(
         "admin/products.html",
         title="Sản phẩm",
         products=product_rows,
+        product_count=len(product_rows),
+        total_stock=sum(product["stock_quantity"] for product in product_rows),
         search=search,
-        show_all=include_all,
         active_nav="products",
     )
 
@@ -338,16 +338,71 @@ def delete_product(product_id):
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "UPDATE Products SET is_active = 0 WHERE product_id = ?;",
+            "SELECT product_id FROM Products WITH (UPDLOCK, HOLDLOCK) WHERE product_id = ?;",
             (product_id,),
+        )
+        if not cursor.fetchone():
+            abort(404)
+
+        cursor.execute(
+            """--sql
+            SELECT TOP 1 order_id
+            FROM OrderDetails WITH (UPDLOCK, HOLDLOCK)
+            WHERE product_id = ?;
+            """,
+            (product_id,),
+        )
+        if cursor.fetchone():
+            conn.rollback()
+            flash(
+                "Không thể xóa sản phẩm đã có trong đơn hàng. Bạn có thể ẩn sản phẩm.",
+                "error",
+            )
+            return redirect(
+                url_for("admin.products", q=request.args.get("q") or None)
+            )
+
+        cursor.execute("DELETE FROM ProductImages WHERE product_id = ?;", (product_id,))
+        cursor.execute("DELETE FROM Products WHERE product_id = ?;", (product_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    flash("Đã xóa sản phẩm.", "success")
+    return redirect(url_for("admin.products", q=request.args.get("q") or None))
+
+
+@admin_bp.post("/products/<int:product_id>/visibility")
+def set_product_visibility(product_id):
+    desired_state = request.form.get("is_active")
+    if desired_state not in {"0", "1"}:
+        abort(400, description="Trạng thái hiển thị sản phẩm không hợp lệ.")
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE Products SET is_active = ? WHERE product_id = ?;",
+            (int(desired_state), product_id),
         )
         if cursor.rowcount == 0:
             abort(404)
         conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
-    flash("Đã ẩn sản phẩm khỏi cửa hàng.", "success")
-    return redirect(url_for("admin.products"))
+
+    flash(
+        "Đã hiển thị sản phẩm trên cửa hàng."
+        if desired_state == "1"
+        else "Đã ẩn sản phẩm khỏi cửa hàng.",
+        "success",
+    )
+    return redirect(url_for("admin.products", q=request.args.get("q") or None))
 
 
 @admin_bp.route("/categories")

@@ -14,11 +14,13 @@ STAFF = (7, "Sales Staff", "SALESTAFF", generate_password_hash("87654321"), 2, T
 class SalesCursor:
     executions = []
     listed_order_status = "Chờ duyệt"
+    referenced_product = False
 
     def __init__(self):
         self.row = None
         self.rows = []
         self.description = []
+        self.rowcount = 1
 
     def execute(self, query, params=()):
         self.executions.append((query, params))
@@ -31,6 +33,24 @@ class SalesCursor:
         elif "SELECT user_id, full_name, username, role, is_active" in query:
             if params[0] == STAFF[0]:
                 self.row = (STAFF[0], STAFF[1], STAFF[2], STAFF[4], STAFF[5])
+        elif "SELECT category_id, category_name, slug, image_url, is_active" in query:
+            self.description = [
+                (name,)
+                for name in (
+                    "category_id",
+                    "category_name",
+                    "slug",
+                    "image_url",
+                    "is_active",
+                )
+            ]
+            self.rows = [(3, "iPhone", "iphone", None, True)]
+        elif "SELECT category_id\n                    FROM Categories" in query:
+            self.row = None
+        elif "SELECT product_id FROM Products WITH" in query:
+            self.row = (10,)
+        elif "SELECT TOP 1 order_id" in query and "OrderDetails" in query:
+            self.row = (5,) if self.referenced_product else None
         elif "AS pending_orders" in query:
             names = ("pending_orders", "orders_today", "revenue_today", "revenue_month")
             self.description = [(name,) for name in names]
@@ -160,6 +180,7 @@ class SalesAuthenticationTests(unittest.TestCase):
     def setUp(self):
         SalesCursor.executions = []
         SalesCursor.listed_order_status = "Chờ duyệt"
+        SalesCursor.referenced_product = False
         store_app.app.config.update(TESTING=True, SECRET_KEY="sales-test-secret")
         self.client = store_app.app.test_client()
         self.categories_patch = patch.object(
@@ -305,6 +326,101 @@ class SalesAuthenticationTests(unittest.TestCase):
         with patch.object(sales_routes, "_product_categories", return_value=[]):
             product_form = self.client.get("/staff/products/new")
         self.assertEqual(product_form.status_code, 200)
+
+    def test_staff_can_manage_categories_and_product_actions(self):
+        with self.client.session_transaction() as current_session:
+            current_session["sales_staff_id"] = STAFF[0]
+            current_session["csrf_token"] = "sales-test-token"
+
+        with patch.object(
+            sales_routes,
+            "_categories",
+            return_value=[
+                {
+                    "category_id": 3,
+                    "category_name": "iPhone",
+                    "slug": "iphone",
+                    "is_active": True,
+                }
+            ],
+        ):
+            categories = self.client.get("/staff/categories")
+        self.assertEqual(categories.status_code, 200)
+        self.assertIn(b"iPhone", categories.data)
+        self.assertIn(b"/staff/categories/3/edit", categories.data)
+
+        new_category = self.client.post(
+            "/staff/categories/new",
+            data={
+                "csrf_token": "sales-test-token",
+                "category_name": "Mac",
+                "slug": "mac",
+                "is_active": "1",
+            },
+        )
+        self.assertEqual(new_category.status_code, 302)
+        self.assertEqual(new_category.headers["Location"], "/staff/categories")
+        self.assertTrue(
+            any("INSERT INTO Categories" in query for query, _ in SalesCursor.executions)
+        )
+
+        edit_category = self.client.post(
+            "/staff/categories/3/edit",
+            data={
+                "csrf_token": "sales-test-token",
+                "category_name": "iPhone updated",
+                "slug": "iphone-updated",
+                "is_active": "0",
+            },
+        )
+        self.assertEqual(edit_category.status_code, 302)
+        self.assertTrue(
+            any("UPDATE Categories" in query for query, _ in SalesCursor.executions)
+        )
+
+        product = {
+            "product_id": 10,
+            "product_name": "Test iPhone",
+            "color": "Black",
+            "category_name": "iPhone",
+            "price": 1499,
+            "stock_quantity": 3,
+            "is_active": False,
+            "image_url": None,
+        }
+        with patch.object(sales_routes, "get_admin_products", return_value=[product]):
+            product_page = self.client.get("/staff/products")
+        self.assertEqual(product_page.status_code, 200)
+        self.assertIn(b"Test iPhone", product_page.data)
+        self.assertIn(b"/staff/products/10/visibility", product_page.data)
+        self.assertIn(b"/staff/products/10/delete", product_page.data)
+
+        hidden = self.client.post(
+            "/staff/products/10/visibility",
+            data={"csrf_token": "sales-test-token", "is_active": "0"},
+        )
+        self.assertEqual(hidden.status_code, 302)
+        self.assertTrue(
+            any("UPDATE Products SET is_active" in query for query, _ in SalesCursor.executions)
+        )
+
+        deleted = self.client.post(
+            "/staff/products/10/delete",
+            data={"csrf_token": "sales-test-token"},
+        )
+        self.assertEqual(deleted.status_code, 302)
+        self.assertTrue(
+            any("DELETE FROM Products" in query for query, _ in SalesCursor.executions)
+        )
+
+        SalesCursor.referenced_product = True
+        blocked_delete = self.client.post(
+            "/staff/products/10/delete",
+            data={"csrf_token": "sales-test-token"},
+        )
+        self.assertEqual(blocked_delete.status_code, 302)
+        blocked_delete_page = self.client.get(blocked_delete.headers["Location"])
+        self.assertIn("Không thể xóa sản phẩm".encode(), blocked_delete_page.data)
 
     def test_reports_reject_reversed_date_ranges(self):
         with self.client.session_transaction() as current_session:

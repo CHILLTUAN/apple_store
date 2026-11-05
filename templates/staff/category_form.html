@@ -1,0 +1,41 @@
+{% extends "staff/base.html" %}
+{% block staff_content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">
+      <a href="{{ url_for('sales.categories') }}">DANH MỤC</a>
+      / {{ "CHỈNH SỬA" if category else "THÊM MỚI" }}
+    </p>
+    <h1>{{ title }}</h1>
+  </div>
+</div>
+<form class="panel form-panel narrow-panel" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="form-grid">
+    <label class="field field-wide">
+      Tên danh mục
+      <input name="category_name" required maxlength="100" value="{{ category.category_name if category else '' }}">
+    </label>
+    <label class="field field-wide">
+      Slug
+      <input name="slug" required maxlength="100" value="{{ category.slug if category else '' }}">
+      <small>Slug dùng cho địa chỉ danh mục, ví dụ: iphone.</small>
+    </label>
+    <label class="field field-wide">
+      Đường dẫn ảnh
+      <input name="image_url" maxlength="255" value="{{ category.image_url if category else '' }}">
+    </label>
+    <label class="field field-wide">
+      Trạng thái
+      <select name="is_active">
+        <option value="1" {% if not category or category.is_active %}selected{% endif %}>Đang hiển thị</option>
+        <option value="0" {% if category and not category.is_active %}selected{% endif %}>Đã ẩn</option>
+      </select>
+    </label>
+  </div>
+  <div class="form-actions">
+    <a class="button button-light" href="{{ url_for('sales.categories') }}">Hủy</a>
+    <button class="button button-dark" type="submit">Lưu danh mục</button>
+  </div>
+</form>
+{% endblock %}

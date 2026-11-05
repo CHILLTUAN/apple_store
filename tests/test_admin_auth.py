@@ -28,25 +28,14 @@ class FakeCursor:
                 self.row = (user[0], user[1], user[2], user[3], user[4])
         elif "SELECT user_id, full_name, username, role, is_active" in query:
             self.row = USERS_BY_ID.get(params[0])
-        elif "AS total_orders" in query:
+        elif "AS customers" in query:
             self.description = [(name,) for name in (
-                "total_orders",
                 "customers",
-                "pending_orders",
                 "revenue_today",
                 "revenue_month",
                 "revenue_year",
             )]
-            self.rows = [(5, 6, 3, 1, 100000, 200000, 300000)]
-        elif "SELECT TOP 8" in query:
-            self.description = [(name,) for name in (
-                "order_id",
-                "full_name",
-                "order_date",
-                "total_amount",
-                "order_status",
-                "payment_method",
-            )]
+            self.rows = [(6, 100000, 200000, 300000)]
         elif "SUM(total_amount)" in query:
             self.description = [(name,) for name in ("month_start", "revenue")]
 
@@ -160,15 +149,17 @@ class AdminAuthenticationTests(unittest.TestCase):
         self.admin_connection_patch = patch.object(
             admin_routes, "get_connection", side_effect=lambda: FakeConnection()
         )
-        self.home_products_patch = patch.object(admin_routes, "get_home_products", return_value=[])
+        self.admin_products_patch = patch.object(
+            admin_routes, "get_admin_products", return_value=[]
+        )
         self.categories_patch.start()
         self.connection_patch.start()
         self.admin_connection_patch.start()
-        self.home_products_patch.start()
+        self.admin_products_patch.start()
         self.addCleanup(self.categories_patch.stop)
         self.addCleanup(self.connection_patch.stop)
         self.addCleanup(self.admin_connection_patch.stop)
-        self.addCleanup(self.home_products_patch.stop)
+        self.addCleanup(self.admin_products_patch.stop)
 
     def _csrf_token(self):
         self.client.get("/login")
@@ -188,20 +179,30 @@ class AdminAuthenticationTests(unittest.TestCase):
     def test_admin_login_redirects_to_dashboard_and_renders(self):
         with self.client.session_transaction() as current_session:
             current_session["cart"] = {"20": 1}
-        response = self._login_admin()
+        response = self.client.post(
+            "/login",
+            data={
+                "username": "admin",
+                "password": "correct-horse-battery",
+                "csrf_token": self._csrf_token(),
+                "remember_me": "on",
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["Location"], "/admin/")
+        session_cookie = response.headers["Set-Cookie"]
+        self.assertNotIn("Expires=", session_cookie)
+        self.assertNotIn("Max-Age=", session_cookie)
         with self.client.session_transaction() as current_session:
             self.assertEqual(current_session["cart"], {"20": 1})
+            self.assertFalse(current_session.permanent)
 
         dashboard = self.client.get(response.headers["Location"])
         self.assertEqual(dashboard.status_code, 200)
         self.assertIn(b"Doanh thu h\xc3\xb4m nay", dashboard.data)
         self.assertIn(b"Store Admin", dashboard.data)
-        recent_orders_query = next(
-            query for query in FakeCursor.executed_queries if "SELECT TOP 8" in query
-        )
-        self.assertIn("WHERE o.order_status <> N'Đã hủy'", recent_orders_query)
+        self.assertFalse(any("SELECT TOP 8" in query for query in FakeCursor.executed_queries))
+        self.assertNotIn("Đơn hàng gần đây".encode(), dashboard.data)
 
     def test_customer_login_does_not_grant_admin_access(self):
         response = self.client.post(

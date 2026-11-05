@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Theo dõi đơn hàng | {{ store_name }}{% endblock %}
+
+{% block content %}
+<section class="customer-account customer-orders">
+  <h1>Theo dõi đơn hàng</h1>
+  <p class="customer-orders-intro">Xem trạng thái mới nhất của các đơn hàng bạn đã đặt.</p>
+
+  {% if orders %}
+  <div class="customer-order-list">
+    {% for order in orders %}
+    <article class="customer-order-card">
+      <header>
+        <h2>Đơn hàng #{{ order.order_id }}</h2>
+        <span class="customer-order-status">{{ order.order_status }}</span>
+      </header>
+      <dl>
+        <div>
+          <dt>Ngày đặt</dt>
+          <dd>{{ order.order_date.strftime("%d/%m/%Y %H:%M") if order.order_date else "—" }}</dd>
+        </div>
+        <div>
+          <dt>Thanh toán</dt>
+          <dd>{{ order.payment_status or "Chưa thanh toán" }}</dd>
+        </div>
+        <div>
+          <dt>Địa chỉ nhận hàng</dt>
+          <dd>{{ order.shipping_address }}</dd>
+        </div>
+        <div>
+          <dt>Tổng tiền</dt>
+          <dd>{{ order.total_amount|vnd }}</dd>
+        </div>
+      </dl>
+      <div class="customer-order-items">
+        <h3>Sản phẩm đã mua</h3>
+        {% if order["items"] %}
+        <div class="customer-order-items-list">
+          {% for item in order["items"] %}
+          <div class="customer-order-item">
+            <div class="customer-order-item-description">
+              <strong>{{ item.product_name }}</strong>
+              <span>
+                {% if item.color %}{{ item.color }}{% endif %}
+                {% if item.ram %} · RAM {{ item.ram }}{% endif %}
+                {% if item.rom %} · {{ item.rom }}{% endif %}
+                {% if item.charger_power %} · {{ item.charger_power }}{% endif %}
+              </span>
+              {% if item.engraving_text %}
+              <small>Khắc: {{ item.engraving_text }}</small>
+              {% endif %}
+            </div>
+            <span>{{ item.quantity }} × {{ item.unit_price|vnd }}</span>
+            <strong>{{ item.line_total|vnd }}</strong>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="customer-orders-empty">Không có thông tin sản phẩm cho đơn hàng này.</p>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="customer-orders-empty">Bạn chưa có đơn hàng nào.</p>
+  {% endif %}
+
+  <a class="cart-continue-shopping" href="{{ url_for('customer_account') }}">
+    Quay lại tài khoản
+  </a>
+</section>
+{% endblock %}

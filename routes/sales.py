@@ -24,6 +24,7 @@ from database.order_repository import (
 from database.product_repository import get_admin_products
 from database.utils import rows_to_dicts
 from routes.admin import (
+    _categories,
     ORDER_STATUSES,
     _product_categories,
     _product_form_data,
@@ -272,6 +273,98 @@ def products():
     )
 
 
+@sales_bp.route("/categories")
+def categories():
+    return render_template(
+        "staff/categories.html",
+        title="Danh mục",
+        category_rows=_categories(),
+        active_nav="categories",
+    )
+
+
+@sales_bp.route("/categories/new", methods=["GET", "POST"])
+@sales_bp.route("/categories/<int:category_id>/edit", methods=["GET", "POST"])
+def edit_category(category_id=None):
+    category = None
+    if category_id is not None:
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """--sql
+                SELECT category_id, category_name, slug, image_url, is_active
+                FROM Categories
+                WHERE category_id = ?;
+                """,
+                (category_id,),
+            )
+            category_rows = rows_to_dicts(cursor)
+        finally:
+            conn.close()
+        if not category_rows:
+            abort(404)
+        category = category_rows[0]
+
+    if request.method == "POST":
+        name = request.form.get("category_name", "").strip()
+        slug = request.form.get("slug", "").strip()
+        image_url = request.form.get("image_url", "").strip() or None
+        is_active = 1 if request.form.get("is_active") == "1" else 0
+        if not name or not slug:
+            flash("Tên danh mục và slug không được để trống.", "error")
+        else:
+            conn = get_connection()
+            try:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """--sql
+                    SELECT category_id
+                    FROM Categories
+                    WHERE slug = ? AND category_id <> ?;
+                    """,
+                    (slug, category_id or 0),
+                )
+                if cursor.fetchone():
+                    flash("Slug này đã được sử dụng.", "error")
+                else:
+                    if category_id is None:
+                        cursor.execute(
+                            """--sql
+                            INSERT INTO Categories (
+                                category_name, slug, image_url, is_active
+                            )
+                            VALUES (?, ?, ?, ?);
+                            """,
+                            (name, slug, image_url, is_active),
+                        )
+                    else:
+                        cursor.execute(
+                            """--sql
+                            UPDATE Categories
+                            SET category_name = ?, slug = ?, image_url = ?,
+                                is_active = ?
+                            WHERE category_id = ?;
+                            """,
+                            (name, slug, image_url, is_active, category_id),
+                        )
+                    conn.commit()
+                    flash("Đã lưu danh mục.", "success")
+                    return redirect(url_for("sales.categories"))
+            except Exception:
+                conn.rollback()
+                raise
+            finally:
+                conn.close()
+
+    return render_template(
+        "staff/category_form.html",
+        title="Thêm danh mục" if category_id is None else "Chỉnh sửa danh mục",
+        category=category,
+        active_nav="categories",
+    )
+
+
 @sales_bp.route("/products/new", methods=["GET", "POST"])
 def new_product():
     if request.method == "POST":
@@ -398,8 +491,52 @@ def delete_product(product_id):
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "UPDATE Products SET is_active = 0 WHERE product_id = ?;",
+            "SELECT product_id FROM Products WITH (UPDLOCK, HOLDLOCK) WHERE product_id = ?;",
             (product_id,),
+        )
+        if not cursor.fetchone():
+            abort(404)
+
+        cursor.execute(
+            """--sql
+            SELECT TOP 1 order_id
+            FROM OrderDetails WITH (UPDLOCK, HOLDLOCK)
+            WHERE product_id = ?;
+            """,
+            (product_id,),
+        )
+        if cursor.fetchone():
+            conn.rollback()
+            flash(
+                "Không thể xóa sản phẩm đã có trong đơn hàng. Bạn có thể ẩn sản phẩm.",
+                "error",
+            )
+            return redirect(url_for("sales.products", q=request.args.get("q") or None))
+
+        cursor.execute("DELETE FROM ProductImages WHERE product_id = ?;", (product_id,))
+        cursor.execute("DELETE FROM Products WHERE product_id = ?;", (product_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    flash("Đã xóa sản phẩm.", "success")
+    return redirect(url_for("sales.products", q=request.args.get("q") or None))
+
+
+@sales_bp.post("/products/<int:product_id>/visibility")
+def set_product_visibility(product_id):
+    desired_state = request.form.get("is_active")
+    if desired_state not in {"0", "1"}:
+        abort(400, description="Trạng thái hiển thị sản phẩm không hợp lệ.")
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE Products SET is_active = ? WHERE product_id = ?;",
+            (int(desired_state), product_id),
         )
         if cursor.rowcount == 0:
             abort(404)
@@ -409,8 +546,14 @@ def delete_product(product_id):
         raise
     finally:
         conn.close()
-    flash("Đã ẩn sản phẩm khỏi cửa hàng.", "success")
-    return redirect(url_for("sales.products"))
+
+    flash(
+        "Đã hiển thị sản phẩm trên cửa hàng."
+        if desired_state == "1"
+        else "Đã ẩn sản phẩm khỏi cửa hàng.",
+        "success",
+    )
+    return redirect(url_for("sales.products", q=request.args.get("q") or None))
 
 
 @sales_bp.route("/reports")

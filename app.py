@@ -65,6 +65,7 @@ def protect_authentication_forms():
         "login",
         "register",
         "logout",
+        "logout_on_close",
         "edit_customer_account",
         "add_to_cart",
         "remove_from_cart",
@@ -801,7 +802,7 @@ def login():
             session.pop("admin_user_id", None)
             session.pop("sales_staff_id", None)
             session.pop("customer_user_id", None)
-            session.permanent = request.form.get("remember_me") == "on"
+            session.permanent = False
             next_url = request.args.get("next", "")
             parsed_next_url = urlsplit(next_url)
             safe_next_url = (
@@ -856,6 +857,12 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.post("/logout-on-close")
+def logout_on_close():
+    session.clear()
+    return "", 204
+
+
 def _load_customer_profile():
     customer_id = session.get("customer_user_id")
     if customer_id is None:
@@ -901,6 +908,71 @@ def customer_account():
         "account/profile.html",
         store_name="Apple Store",
         customer=customer,
+    )
+
+
+@app.get("/account/orders")
+def customer_orders():
+    customer_id = session.get("customer_user_id")
+    if customer_id is None:
+        flash("Vui lòng đăng nhập để theo dõi đơn hàng.", "error")
+        return redirect(url_for("login"))
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """--sql
+            SELECT o.order_id, o.order_date, o.total_amount, o.order_status,
+                o.payment_status, o.shipping_address, d.product_id,
+                p.product_name, p.color, p.ram, p.rom, p.charger_power,
+                d.quantity, d.unit_price, d.engraving_text,
+                d.quantity * d.unit_price AS line_total
+            FROM Orders AS o
+            LEFT JOIN OrderDetails AS d ON d.order_id = o.order_id
+            LEFT JOIN Products AS p ON p.product_id = d.product_id
+            WHERE o.user_id = ?
+            ORDER BY o.order_date DESC, o.order_id DESC, p.product_name ASC;
+            """,
+            (customer_id,),
+        )
+        order_rows = rows_to_dicts(cursor)
+    finally:
+        conn.close()
+
+    orders_by_id = {}
+    for row in order_rows:
+        order = orders_by_id.setdefault(
+            row["order_id"],
+            {
+                "order_id": row["order_id"],
+                "order_date": row["order_date"],
+                "total_amount": row["total_amount"],
+                "order_status": row["order_status"],
+                "payment_status": row["payment_status"],
+                "shipping_address": row["shipping_address"],
+                "items": [],
+            },
+        )
+        if row["product_id"] is not None:
+            order["items"].append(
+                {
+                    "product_name": row["product_name"],
+                    "color": row["color"],
+                    "ram": row["ram"],
+                    "rom": row["rom"],
+                    "charger_power": row["charger_power"],
+                    "quantity": row["quantity"],
+                    "unit_price": row["unit_price"],
+                    "engraving_text": row["engraving_text"],
+                    "line_total": row["line_total"],
+                }
+            )
+
+    return render_template(
+        "account/orders.html",
+        store_name="Apple Store",
+        orders=list(orders_by_id.values()),
     )
 
 

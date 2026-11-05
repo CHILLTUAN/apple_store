@@ -1,16 +1,27 @@
 {% extends "staff/base.html" %}
 {% block staff_content %}
-<div class="page-heading"><div><p class="eyebrow">QUẢN LÝ DANH MỤC</p><h1>Sản phẩm</h1><p class="page-subtitle">Thêm, chỉnh sửa hoặc ẩn sản phẩm khỏi cửa hàng.</p></div><a class="button button-dark" href="{{ url_for('sales.new_product') }}">＋ Thêm sản phẩm</a></div>
+<div class="page-heading"><div><p class="eyebrow">QUẢN LÝ CỬA HÀNG</p><h1>Sản phẩm</h1><p class="page-subtitle">Quản lý tất cả sản phẩm, bao gồm cả sản phẩm đã ẩn.</p></div><a class="button button-dark" href="{{ url_for('sales.new_product') }}">＋ Thêm sản phẩm</a></div>
 <section class="panel">
   <div class="panel-heading"><div><h2>Toàn bộ sản phẩm</h2><p>{{ products|length }} sản phẩm</p></div><form class="inline-search" method="get"><input type="search" name="q" value="{{ search }}" placeholder="Tìm theo tên sản phẩm" aria-label="Tìm sản phẩm"><button class="button button-light" type="submit">Tìm</button></form></div>
   {% if products %}
   <div class="table-wrap"><table><thead><tr><th>Sản phẩm</th><th>Danh mục</th><th>Giá bán</th><th>Tồn kho</th><th>Trạng thái</th><th></th></tr></thead><tbody>
   {% for product in products %}
   <tr>
-    <td><div class="product-cell">{% if product.image_url %}<img src="{{ url_for('static', filename=product.image_url) }}" alt="" />{% else %}<span class="image-placeholder">▣</span>{% endif %}<span><strong>{{ product.product_name }}</strong><small>#{{ product.product_id }}</small></span></div></td>
+    <td><div class="product-cell">{% if product.image_url %}<img src="{{ url_for('static', filename=product.image_url) }}" alt="" />{% else %}<span class="image-placeholder">▣</span>{% endif %}<span><strong>{{ product.product_name }}</strong><small>{{ product.color or "Màu chưa cập nhật" }} · #{{ product.product_id }}</small></span></div></td>
     <td>{{ product.category_name }}</td><td class="strong">{{ product.price|vnd }}</td><td>{{ product.stock_quantity }}</td>
     <td><span class="status-pill {{ 'status-green' if product.stock_quantity > 0 else 'status-muted' }}">{{ "Còn hàng" if product.stock_quantity > 0 else "Hết hàng" }}</span><small class="table-subtext">{{ "Đang bán" if product.is_active else "Đã ẩn" }}</small></td>
-    <td><div class="row-actions"><a class="button button-small button-light" href="{{ url_for('sales.edit_product', product_id=product.product_id) }}">Sửa</a>{% if product.is_active %}<form method="post" action="{{ url_for('sales.delete_product', product_id=product.product_id) }}" onsubmit="return confirm('Ẩn sản phẩm này khỏi cửa hàng?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button button-small button-danger" type="submit">Ẩn</button></form>{% endif %}</div></td>
+    <td><div class="row-actions">
+      <a class="button button-small button-light" href="{{ url_for('sales.edit_product', product_id=product.product_id) }}">Sửa</a>
+      <form method="post" action="{{ url_for('sales.set_product_visibility', product_id=product.product_id, q=search or None) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="is_active" value="{{ 0 if product.is_active else 1 }}">
+        <button class="button button-small button-{{ 'danger' if product.is_active else 'approve' }}" type="submit">{{ "Ẩn" if product.is_active else "Hiện trên trang chủ" }}</button>
+      </form>
+      <form method="post" action="{{ url_for('sales.delete_product', product_id=product.product_id, q=search or None) }}" onsubmit="return confirm('Xóa vĩnh viễn sản phẩm này? Sản phẩm đã có trong đơn hàng sẽ không thể xóa.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="button button-small button-danger" type="submit">Xóa</button>
+      </form>
+    </div></td>
   </tr>
   {% endfor %}
   </tbody></table></div>

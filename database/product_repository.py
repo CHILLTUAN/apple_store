@@ -128,7 +128,11 @@ def get_home_products(search="", limit=None):
 
 def get_admin_products(search="", include_all=False):
     if not include_all:
-        return get_home_products(search)
+        return [
+            product
+            for product in get_home_products(search)
+            if product["is_active"]
+        ]
 
     conn = get_connection()
     try:

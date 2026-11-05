@@ -19,21 +19,70 @@ class CustomerAccountCursor:
         self.row = None
         self.rowcount = 0
         self.executions = []
+        self.description = []
+        self.rows = []
 
     def execute(self, query, params=()):
         self.executions.append((query, params))
         self.row = None
         self.rowcount = 0
+        self.description = []
+        self.rows = []
         if "SELECT user_id, full_name, phone, email, address, username" in query:
             if params[0] == CUSTOMER[0]:
                 self.row = CUSTOMER
         elif "SELECT user_id FROM Users" in query and "email = ?" in query:
             self.row = None
+        elif "FROM Orders" in query and "WHERE o.user_id = ?" in query:
+            self.description = [
+                (name,)
+                for name in (
+                    "order_id",
+                    "order_date",
+                    "total_amount",
+                    "order_status",
+                    "payment_status",
+                    "shipping_address",
+                    "product_id",
+                    "product_name",
+                    "color",
+                    "ram",
+                    "rom",
+                    "charger_power",
+                    "quantity",
+                    "unit_price",
+                    "engraving_text",
+                    "line_total",
+                )
+            ]
+            self.rows = [
+                (
+                    73,
+                    None,
+                    1499,
+                    "Đang giao",
+                    "Chưa thanh toán",
+                    "Test address",
+                    12,
+                    "iPhone Test",
+                    "Đen",
+                    "8GB",
+                    "256GB",
+                    None,
+                    2,
+                    1499,
+                    "For Linh",
+                    2998,
+                )
+            ]
         elif "UPDATE Users" in query:
             self.rowcount = 1
 
     def fetchone(self):
         return self.row
+
+    def fetchall(self):
+        return self.rows
 
 
 class CustomerAccountConnection:
@@ -86,6 +135,31 @@ class CustomerAccountTests(unittest.TestCase):
         self.assertIn("Thay đổi thông tin cá nhân".encode(), profile.data)
         self.assertIn("Đăng xuất".encode(), profile.data)
         self.assertIn(b'action="/logout"', profile.data)
+        self.assertIn(b'href="/account/orders"', profile.data)
+
+    def test_customer_can_track_their_orders(self):
+        response = self.client.get("/account/orders")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Đơn hàng #73".encode(), response.data)
+        self.assertIn("Đang giao".encode(), response.data)
+        self.assertIn("1.499 ₫".encode(), response.data)
+        self.assertIn("iPhone Test".encode(), response.data)
+        self.assertIn("RAM 8GB".encode(), response.data)
+        self.assertIn("For Linh".encode(), response.data)
+        self.assertIn("2.998 ₫".encode(), response.data)
+        query, params = self.connection.test_cursor.executions[-1]
+        self.assertIn("WHERE o.user_id = ?", query)
+        self.assertEqual(params, (CUSTOMER[0],))
+
+    def test_order_tracking_requires_customer_login(self):
+        with self.client.session_transaction() as current_session:
+            current_session.pop("customer_user_id")
+
+        response = self.client.get("/account/orders")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/login")
 
     def test_customer_can_update_personal_information(self):
         response = self.client.post(
@@ -139,6 +213,16 @@ class CustomerAccountTests(unittest.TestCase):
 
         login_page = self.client.get("/login")
         self.assertIn("Bạn đã đăng xuất.".encode(), login_page.data)
+
+    def test_browser_close_signal_clears_the_signed_in_session(self):
+        response = self.client.post(
+            "/logout-on-close",
+            data={"csrf_token": "account-test-token"},
+        )
+
+        self.assertEqual(response.status_code, 204)
+        with self.client.session_transaction() as current_session:
+            self.assertNotIn("customer_user_id", current_session)
 
     def test_account_page_requires_customer_login(self):
         with self.client.session_transaction() as current_session:

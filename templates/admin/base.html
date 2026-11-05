@@ -16,8 +16,6 @@
       <nav class="admin-nav" aria-label="Điều hướng quản trị">
         <a class="{{ 'is-active' if active_nav == 'dashboard' }}" href="{{ url_for('admin.dashboard') }}"><span>◫</span>Tổng quan</a>
         <a class="{{ 'is-active' if active_nav == 'products' }}" href="{{ url_for('admin.products') }}"><span>▣</span>Sản phẩm</a>
-        <a class="{{ 'is-active' if active_nav == 'categories' }}" href="{{ url_for('admin.categories') }}"><span>▦</span>Danh mục</a>
-        <a class="{{ 'is-active' if active_nav == 'orders' }}" href="{{ url_for('admin.orders') }}"><span>▤</span>Đơn hàng</a>
         <a class="{{ 'is-active' if active_nav == 'customers' }}" href="{{ url_for('admin.customers') }}"><span>♙</span>Khách hàng</a>
         <a class="{{ 'is-active' if active_nav == 'users' }}" href="{{ url_for('admin.users') }}"><span>♧</span>Người dùng</a>
         <a class="{{ 'is-active' if active_nav == 'vouchers' }}" href="{{ url_for('admin.vouchers') }}"><span>％</span>Mã giảm giá</a>
@@ -41,11 +39,15 @@
     <div class="admin-main">
       <header class="admin-topbar">
         <form class="admin-search" action="{{ url_for('admin.products') }}" method="get">
-          <span aria-hidden="true">⌕</span>
           <input type="search" name="q" placeholder="Tìm sản phẩm..." aria-label="Tìm sản phẩm" />
-          <kbd>⌘ K</kbd>
+          <button class="admin-search-button" type="submit" aria-label="Tìm sản phẩm" title="Tìm sản phẩm">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="10.8" cy="10.8" r="6.3"></circle>
+              <path d="m15.5 15.5 4.2 4.2"></path>
+            </svg>
+          </button>
         </form>
-        <a class="topbar-orders" href="{{ url_for('admin.orders') }}">Đơn hàng mới <span>→</span></a>
+        <span class="topbar-orders">Quản trị hệ thống</span>
       </header>
       <main class="admin-content">
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -62,5 +64,11 @@
       <footer class="admin-footer">Apple Store · Khu vực quản trị</footer>
     </div>
     <script src="{{ url_for('static', filename='js/admin.js') }}" defer></script>
+    <script
+      src="{{ url_for('static', filename='js/logout-on-close.js') }}"
+      data-logout-url="{{ url_for('logout_on_close') }}"
+      data-csrf-token="{{ csrf_token }}"
+      defer
+    ></script>
   </body>
 </html>
