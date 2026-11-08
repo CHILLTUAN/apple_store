@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ store_name }} | Thông báo{% endblock %}
+
+{% block content %}
+<section class="account-section notifications-section">
+  <div class="account-heading">
+    <div>
+      <p class="account-eyebrow">Cập nhật mới nhất</p>
+      <h1>Thông báo</h1>
+    </div>
+    {% if notifications|selectattr("is_read", "equalto", false)|list %}
+    <form method="post" action="{{ url_for('mark_notifications_read') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+      <button class="notification-read-button" type="submit">Đánh dấu đã đọc</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if notifications %}
+  <div class="notification-list">
+    {% for notification in notifications %}
+    <article class="notification-card{% if not notification.is_read %} is-unread{% endif %}">
+      <div class="notification-card-heading">
+        <h2>{{ notification.title }}</h2>
+        <time>{{ notification.created_at }}</time>
+      </div>
+      <p>{{ notification.message }}</p>
+      <div class="notification-card-actions">
+        <a href="{{ url_for('customer_orders') }}">Xem đơn hàng #{{ notification.order_id }}</a>
+        <form
+          method="post"
+          action="{{ url_for('delete_customer_notification', notification_id=notification.notification_id) }}"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          <button class="notification-delete-button" type="submit">
+            Xóa thông báo
+          </button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="notification-empty">
+    <p>Bạn chưa có thông báo nào.</p>
+    <a href="{{ url_for('home') }}">Tiếp tục mua sắm</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

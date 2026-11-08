@@ -5,6 +5,7 @@ from unittest.mock import patch
 from werkzeug.security import generate_password_hash
 
 import app as store_app
+import database.notification_repository as notification_repository
 
 
 CUSTOMER = (
@@ -41,6 +42,8 @@ class CheckoutCursor:
                 ("reserved_quantity",),
             ]
             self.rows = [(10, "MacBook", "Bạc", 1000, 5, 0)]
+        elif "COUNT(*)" in query and "FROM CustomerNotifications" in query:
+            self.row = (0,)
         elif "SELECT user_id, full_name, password_hash, role, is_active" in query:
             if params[0] == "CUSTOMER":
                 self.row = CUSTOMER
@@ -128,10 +131,15 @@ class CustomerCheckoutTests(unittest.TestCase):
         self.connection_patch = patch.object(
             store_app, "get_connection", return_value=self.connection
         )
+        self.notification_connection_patch = patch.object(
+            notification_repository, "get_connection", return_value=self.connection
+        )
         self.categories_patch.start()
         self.connection_patch.start()
+        self.notification_connection_patch.start()
         self.addCleanup(self.categories_patch.stop)
         self.addCleanup(self.connection_patch.stop)
+        self.addCleanup(self.notification_connection_patch.stop)
         with self.client.session_transaction() as current_session:
             current_session["csrf_token"] = "checkout-test-token"
             current_session["cart"] = {"10": 1}
@@ -189,6 +197,21 @@ class CustomerCheckoutTests(unittest.TestCase):
             if "INSERT INTO OrderDetails" in query
         )
         self.assertEqual(detail_insert[-1], "For Linh")
+        notification_insert = next(
+            params
+            for query, params in self.connection.test_cursor.executions
+            if "INSERT INTO CustomerNotifications" in query
+        )
+        self.assertEqual(
+            notification_insert,
+            (
+                CUSTOMER[0],
+                31,
+                "order_placed",
+                "Đặt hàng thành công",
+                "Đơn hàng #31 đã được tiếp nhận và đang chờ duyệt.",
+            ),
+        )
         self.assertEqual(order_insert[0], CUSTOMER[0])
         self.assertFalse(
             any(

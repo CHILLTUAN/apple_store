@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 import app as store_app
 from routes import admin as admin_routes
@@ -59,6 +59,7 @@ class UserActionCursor:
     user_to_delete = (2, 3, True, "customer")
     active_order_count = 0
     cancelled_order_count = 0
+    inserted_user = None
 
     def __init__(self):
         self.row = None
@@ -91,6 +92,11 @@ class UserActionCursor:
                 )
             ]
             self.rows = [(2, "Store Customer", None, None, "customer", 3, True, None)]
+        elif "WHERE username = ? OR (? IS NOT NULL AND email = ?)" in query:
+            if params[0] == "taken" or params[2] == "taken@example.com":
+                self.row = (99,)
+        elif "INSERT INTO Users" in query:
+            type(self).inserted_user = params
         elif "SELECT COUNT(*) FROM Users" in query:
             self.row = (1,)
         elif "SELECT COUNT(*) FROM Orders" in query:
@@ -140,6 +146,7 @@ class AdminAuthenticationTests(unittest.TestCase):
         UserActionCursor.user_to_delete = (2, 3, True, "customer")
         UserActionCursor.active_order_count = 0
         UserActionCursor.cancelled_order_count = 0
+        UserActionCursor.inserted_user = None
         store_app.app.config.update(TESTING=True, SECRET_KEY="test-secret")
         self.client = store_app.app.test_client()
         self.categories_patch = patch.object(store_app, "get_categories", return_value=[])
@@ -238,6 +245,81 @@ class AdminAuthenticationTests(unittest.TestCase):
         self.assertIn(b"Th\xc3\xaam ng\xc6\xb0\xe1\xbb\x9di d\xc3\xb9ng", response.data)
         self.assertIn(b"Ph\xc3\xa2n quy\xe1\xbb\x81n", response.data)
         self.assertIn(b"X\xc3\xb3a", response.data)
+
+    def test_admin_can_add_user_with_valid_details(self):
+        self._login_admin()
+        csrf_token = self._csrf_token()
+
+        with patch.object(
+            admin_routes, "get_connection", side_effect=UserActionConnection
+        ):
+            response = self.client.post(
+                "/admin/users/new",
+                data={
+                    "csrf_token": csrf_token,
+                    "full_name": "New Customer",
+                    "username": "new_customer",
+                    "password": "secure-password",
+                    "email": "new@example.com",
+                    "phone": "0912345678",
+                    "address": "Test address",
+                    "role": "3",
+                },
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/admin/users")
+        self.assertIsNotNone(UserActionCursor.inserted_user)
+        self.assertEqual(UserActionCursor.inserted_user[:5], (
+            "New Customer",
+            "0912345678",
+            "new@example.com",
+            "Test address",
+            "new_customer",
+        ))
+        self.assertTrue(
+            check_password_hash(UserActionCursor.inserted_user[5], "secure-password")
+        )
+        self.assertEqual(UserActionCursor.inserted_user[6], 3)
+
+    def test_admin_add_user_rejects_duplicate_username_or_email(self):
+        self._login_admin()
+        csrf_token = self._csrf_token()
+
+        with patch.object(
+            admin_routes, "get_connection", side_effect=UserActionConnection
+        ):
+            response = self.client.post(
+                "/admin/users/new",
+                data={
+                    "csrf_token": csrf_token,
+                    "full_name": "New Customer",
+                    "username": "available",
+                    "password": "secure-password",
+                    "email": "taken@example.com",
+                    "role": "3",
+                },
+                follow_redirects=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            "Tên đăng nhập hoặc email đã được sử dụng.".encode(),
+            response.data,
+        )
+        self.assertIsNone(UserActionCursor.inserted_user)
+
+    def test_add_user_form_has_password_visibility_toggle(self):
+        self._login_admin()
+
+        with patch.object(
+            admin_routes, "get_connection", side_effect=UserActionConnection
+        ):
+            response = self.client.get("/admin/users/new")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'data-password-toggle="user-password"', response.data)
+        self.assertIn(b'aria-label="Hi\xe1\xbb\x87n m\xe1\xba\xadt kh\xe1\xba\xa9u"', response.data)
 
     def test_user_can_be_assigned_a_role(self):
         self._login_admin()

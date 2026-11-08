@@ -82,6 +82,26 @@ CREATE TABLE Orders (
 )
 GO
 
+CREATE TABLE CustomerNotifications (
+    notification_id BIGINT IDENTITY(1, 1) PRIMARY KEY,
+    user_id INT NOT NULL,
+    order_id INT NOT NULL,
+    notification_type NVARCHAR(30) NOT NULL,
+    title NVARCHAR(120) NOT NULL,
+    message NVARCHAR(500) NOT NULL,
+    is_read BIT NOT NULL CONSTRAINT DF_CustomerNotifications_is_read DEFAULT 0,
+    created_at DATETIME NOT NULL CONSTRAINT DF_CustomerNotifications_created_at DEFAULT GETDATE(),
+
+    FOREIGN KEY (user_id)
+        REFERENCES Users(user_id)
+        ON DELETE CASCADE
+)
+GO
+
+CREATE INDEX IX_CustomerNotifications_user_unread_created
+    ON CustomerNotifications(user_id, is_read, created_at DESC)
+GO
+
 CREATE TABLE OrderDetails (
     order_id INT NOT NULL,
     product_id INT NOT NULL,

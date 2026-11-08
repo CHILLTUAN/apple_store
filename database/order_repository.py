@@ -1,3 +1,6 @@
+from database.notification_repository import create_order_notification
+
+
 class OrderNotFoundError(LookupError):
     pass
 
@@ -41,7 +44,7 @@ def update_order_status(cursor, order_id, new_status):
 
     cursor.execute(
         """--sql
-        SELECT order_status, stock_committed
+        SELECT order_status, stock_committed, user_id
         FROM Orders WITH (UPDLOCK, ROWLOCK)
         WHERE order_id = ?;
         """,
@@ -51,7 +54,7 @@ def update_order_status(cursor, order_id, new_status):
     if not order:
         raise OrderNotFoundError
 
-    current_status, stock_committed = order
+    current_status, stock_committed, user_id = order
     if current_status == new_status:
         return
     if new_status not in ORDER_TRANSITIONS.get(current_status, ()):
@@ -82,6 +85,24 @@ def update_order_status(cursor, order_id, new_status):
             """,
             (order_id,),
         )
+        title = (
+            "Đơn hàng chưa được duyệt"
+            if current_status == "Chờ duyệt"
+            else "Đơn hàng đã bị hủy"
+        )
+        message = (
+            f"Đơn hàng #{order_id} không được duyệt và đã bị hủy."
+            if current_status == "Chờ duyệt"
+            else f"Đơn hàng #{order_id} đã bị hủy."
+        )
+        create_order_notification(
+            cursor,
+            user_id,
+            order_id,
+            "order_rejected",
+            title,
+            message,
+        )
         return
 
     if not stock_committed:
@@ -110,9 +131,27 @@ def update_order_status(cursor, order_id, new_status):
             """,
             (new_status, order_id),
         )
+        if new_status == "Đang chuẩn bị":
+            create_order_notification(
+                cursor,
+                user_id,
+                order_id,
+                "order_approved",
+                "Đơn hàng đã được duyệt",
+                f"Đơn hàng #{order_id} đã được duyệt và đang được chuẩn bị.",
+            )
         return
 
     cursor.execute(
         "UPDATE Orders SET order_status = ? WHERE order_id = ?;",
         (new_status, order_id),
     )
+    if new_status == "Đang chuẩn bị":
+        create_order_notification(
+            cursor,
+            user_id,
+            order_id,
+            "order_approved",
+            "Đơn hàng đã được duyệt",
+            f"Đơn hàng #{order_id} đã được duyệt và đang được chuẩn bị.",
+        )

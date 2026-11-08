@@ -245,6 +245,62 @@ class SalesAuthenticationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.headers["Location"].startswith("/login?next="))
 
+    def test_homepage_setting_is_in_sales_workspace_only(self):
+        with self.client.session_transaction() as current_session:
+            current_session["sales_staff_id"] = STAFF[0]
+
+        with patch.object(sales_routes, "get_home_product_limit", return_value=4):
+            response = self.client.get("/staff/settings")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"S\xe1\xba\xa3n ph\xe1\xba\xa9m tr\xc3\xaan trang ch\xe1\xbb\xa7", response.data)
+        self.assertIn(b'name="homepage_products_per_category"', response.data)
+        self.assertIn(b'value="4"', response.data)
+        self.assertIn(b'href="/staff/settings"', response.data)
+        self.assertNotIn(b"/admin/settings", response.data)
+        self.assertNotIn("admin.settings", store_app.app.view_functions)
+
+    def test_sales_staff_can_update_homepage_product_limit(self):
+        with self.client.session_transaction() as current_session:
+            current_session["sales_staff_id"] = STAFF[0]
+            current_session["csrf_token"] = "sales-test-token"
+
+        response = self.client.post(
+            "/staff/settings",
+            data={
+                "csrf_token": "sales-test-token",
+                "homepage_products_per_category": "7",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/staff/settings")
+        update = next(
+            (query, params)
+            for query, params in SalesCursor.executions
+            if "UPDATE StoreSettings" in query
+        )
+        self.assertEqual(update[1], (7,))
+
+    def test_sales_staff_cannot_set_invalid_homepage_product_limit(self):
+        with self.client.session_transaction() as current_session:
+            current_session["sales_staff_id"] = STAFF[0]
+            current_session["csrf_token"] = "sales-test-token"
+
+        response = self.client.post(
+            "/staff/settings",
+            data={
+                "csrf_token": "sales-test-token",
+                "homepage_products_per_category": "0",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/staff/settings")
+        self.assertFalse(
+            any("UPDATE StoreSettings" in query for query, _ in SalesCursor.executions)
+        )
+
     def test_sales_workspace_requires_login(self):
         response = self.client.get("/staff/")
         self.assertEqual(response.status_code, 302)

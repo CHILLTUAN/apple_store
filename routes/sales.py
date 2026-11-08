@@ -21,7 +21,11 @@ from database.order_repository import (
     OrderStatusTransitionError,
     update_order_status,
 )
-from database.product_repository import get_admin_products
+from database.product_repository import (
+    MAX_HOME_PRODUCTS_PER_CATEGORY,
+    get_admin_products,
+    get_home_product_limit,
+)
 from database.utils import rows_to_dicts
 from routes.admin import (
     _categories,
@@ -600,4 +604,54 @@ def reports():
         from_date=start_date,
         to_date=end_date,
         active_nav="reports",
+    )
+
+
+@sales_bp.route("/settings", methods=["GET", "POST"])
+def settings():
+    if request.method == "POST":
+        try:
+            product_limit = int(request.form.get("homepage_products_per_category", ""))
+        except ValueError:
+            flash("Số sản phẩm phải là số nguyên.", "error")
+            return redirect(url_for("sales.settings"))
+
+        if not 1 <= product_limit <= MAX_HOME_PRODUCTS_PER_CATEGORY:
+            flash(
+                f"Số sản phẩm phải nằm trong khoảng 1 đến {MAX_HOME_PRODUCTS_PER_CATEGORY}.",
+                "error",
+            )
+            return redirect(url_for("sales.settings"))
+
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """--sql
+                UPDATE StoreSettings
+                SET setting_value = ?
+                WHERE setting_key = N'homepage_products_per_category';
+                """,
+                (product_limit,),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError(
+                    "Không tìm thấy cài đặt số sản phẩm trang chủ. "
+                    "Hãy chạy database/sql/homepage_products_setting_migration.sql."
+                )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+        flash("Đã cập nhật số sản phẩm hiển thị trên trang chủ.", "success")
+        return redirect(url_for("sales.settings"))
+
+    return render_template(
+        "staff/settings.html",
+        title="Cài đặt hệ thống",
+        homepage_products_per_category=get_home_product_limit(),
+        max_home_products_per_category=MAX_HOME_PRODUCTS_PER_CATEGORY,
+        active_nav="settings",
     )

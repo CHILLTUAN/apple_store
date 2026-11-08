@@ -1,7 +1,9 @@
 import hmac
+import re
 import secrets
 from decimal import Decimal, InvalidOperation
 
+import pyodbc
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import generate_password_hash
 
@@ -13,9 +15,7 @@ from database.order_repository import (
     update_order_status,
 )
 from database.product_repository import (
-    MAX_HOME_PRODUCTS_PER_CATEGORY,
     get_admin_products,
-    get_home_product_limit,
 )
 from database.utils import rows_to_dicts
 
@@ -631,6 +631,14 @@ def _render_users(role, title, active_nav):
 
 @admin_bp.route("/users/new", methods=["GET", "POST"])
 def new_user():
+    form_values = {
+        "full_name": "",
+        "username": "",
+        "email": "",
+        "phone": "",
+        "address": "",
+        "role": 3,
+    }
     if request.method == "POST":
         full_name = request.form.get("full_name", "").strip()
         username = request.form.get("username", "").strip()
@@ -638,6 +646,13 @@ def new_user():
         email = request.form.get("email", "").strip() or None
         phone = request.form.get("phone", "").strip() or None
         address = request.form.get("address", "").strip() or None
+        form_values.update(
+            full_name=full_name,
+            username=username,
+            email=email or "",
+            phone=phone or "",
+            address=address or "",
+        )
         try:
             role = int(request.form.get("role", "3"))
             if role not in (1, 2, 3):
@@ -645,8 +660,26 @@ def new_user():
         except ValueError:
             flash("Vai trò người dùng không hợp lệ.", "error")
         else:
-            if not full_name or not username or not password:
-                flash("Họ tên, tên đăng nhập và mật khẩu là bắt buộc.", "error")
+            form_values["role"] = role
+            if (
+                not full_name
+                or len(full_name) > 100
+                or not username
+                or len(username) > 50
+                or not re.fullmatch(r"[A-Za-z0-9_.-]+", username)
+                or not password
+                or (email and (
+                    len(email) > 100
+                    or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
+                ))
+                or (phone and (
+                    len(phone) > 15
+                    or not re.fullmatch(r"[0-9+()\- ]+", phone)
+                    or not 7 <= sum(character.isdigit() for character in phone) <= 15
+                ))
+                or (address and len(address) > 255)
+            ):
+                flash("Vui lòng kiểm tra lại thông tin người dùng.", "error")
             elif len(password) < 8:
                 flash("Mật khẩu phải có ít nhất 8 ký tự.", "error")
             else:
@@ -654,11 +687,17 @@ def new_user():
                 try:
                     cursor = conn.cursor()
                     cursor.execute(
-                        "SELECT user_id FROM Users WHERE username = ?;",
-                        (username,),
+                        """--sql
+                        SELECT user_id FROM Users
+                        WHERE username = ? OR (? IS NOT NULL AND email = ?);
+                        """,
+                        (username, email, email),
                     )
                     if cursor.fetchone():
-                        flash("Tên đăng nhập đã tồn tại.", "error")
+                        flash(
+                            "Tên đăng nhập hoặc email đã được sử dụng.",
+                            "error",
+                        )
                     else:
                         cursor.execute(
                             """--sql
@@ -681,12 +720,22 @@ def new_user():
                         conn.commit()
                         flash("Đã thêm người dùng.", "success")
                         return redirect(url_for("admin.users"))
+                except pyodbc.IntegrityError:
+                    conn.rollback()
+                    flash(
+                        "Tên đăng nhập hoặc email đã được sử dụng.",
+                        "error",
+                    )
+                except Exception:
+                    conn.rollback()
+                    raise
                 finally:
                     conn.close()
     return render_template(
         "admin/user_form.html",
         title="Thêm người dùng",
         user=None,
+        form_values=form_values,
         active_nav="users",
     )
 
@@ -971,54 +1020,4 @@ def vouchers():
         title="Mã giảm giá",
         description="Cơ sở dữ liệu hiện chưa có bảng mã giảm giá. Hãy bổ sung quy tắc voucher trước khi bật quản lý mã giảm giá.",
         active_nav="vouchers",
-    )
-
-
-@admin_bp.route("/settings", methods=["GET", "POST"])
-def settings():
-    if request.method == "POST":
-        try:
-            product_limit = int(request.form.get("homepage_products_per_category", ""))
-        except ValueError:
-            flash("Số sản phẩm phải là số nguyên.", "error")
-            return redirect(url_for("admin.settings"))
-
-        if not 1 <= product_limit <= MAX_HOME_PRODUCTS_PER_CATEGORY:
-            flash(
-                f"Số sản phẩm phải nằm trong khoảng 1 đến {MAX_HOME_PRODUCTS_PER_CATEGORY}.",
-                "error",
-            )
-            return redirect(url_for("admin.settings"))
-
-        conn = get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                """--sql
-                UPDATE StoreSettings
-                SET setting_value = ?
-                WHERE setting_key = N'homepage_products_per_category';
-                """,
-                (product_limit,),
-            )
-            if cursor.rowcount != 1:
-                raise RuntimeError(
-                    "Không tìm thấy cài đặt số sản phẩm trang chủ. "
-                    "Hãy chạy database/sql/homepage_products_setting_migration.sql."
-                )
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
-        flash("Đã cập nhật số sản phẩm hiển thị trên trang chủ.", "success")
-        return redirect(url_for("admin.settings"))
-
-    return render_template(
-        "admin/settings.html",
-        title="Cài đặt hệ thống",
-        homepage_products_per_category=get_home_product_limit(),
-        max_home_products_per_category=MAX_HOME_PRODUCTS_PER_CATEGORY,
-        active_nav="settings",
     )

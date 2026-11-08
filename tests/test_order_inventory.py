@@ -14,6 +14,7 @@ class InventoryCursor:
         self.row = None
         self.rows = []
         self.rowcount = 0
+        self.notifications = []
 
     def execute(self, query, params=()):
         self.row = None
@@ -24,7 +25,9 @@ class InventoryCursor:
         elif "SELECT product_id FROM Products WITH" in query:
             self.row = (10,)
         elif "SELECT order_status, stock_committed" in query:
-            self.row = (self.status, self.stock_committed)
+            self.row = (self.status, self.stock_committed, 42)
+        elif "INSERT INTO CustomerNotifications" in query:
+            self.notifications.append(params)
         elif "SELECT product_id, quantity FROM OrderDetails" in query:
             self.rows = [(10, 2)]
         elif "SET stock_quantity = stock_quantity - ?" in query:
@@ -57,16 +60,19 @@ class OrderInventoryTests(unittest.TestCase):
         update_order_status(cursor, 1, "Đang chuẩn bị")
         self.assertEqual(cursor.stock, 3)
         self.assertTrue(cursor.stock_committed)
+        self.assertEqual(cursor.notifications[0][2], "order_approved")
 
         update_order_status(cursor, 1, "Đã hủy")
         self.assertEqual(cursor.stock, 5)
         self.assertFalse(cursor.stock_committed)
+        self.assertEqual(cursor.notifications[1][2], "order_rejected")
 
     def test_cancelling_pending_order_releases_reservation_without_stock_change(self):
         cursor = InventoryCursor()
         update_order_status(cursor, 1, "Đã hủy")
         self.assertEqual(cursor.stock, 5)
         self.assertFalse(cursor.stock_committed)
+        self.assertIn("không được duyệt", cursor.notifications[0][4])
 
     def test_approval_fails_without_enough_stock(self):
         cursor = InventoryCursor(stock=1)

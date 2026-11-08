@@ -12,6 +12,13 @@ from dotenv import load_dotenv
 from werkzeug.security import check_password_hash, generate_password_hash
 from database.category_repository import get_categories
 from database.connection import get_connection
+from database.notification_repository import (
+    create_order_notification,
+    delete_customer_notification as delete_notification_record,
+    get_customer_notifications,
+    get_unread_notification_count,
+    mark_customer_notifications_read,
+)
 from database.product_repository import get_catalog_products, get_home_products
 from database.utils import rows_to_dicts
 from routes.admin import admin_bp
@@ -53,10 +60,16 @@ def _require_customer_login(next_url, return_url):
 # Đăng ký hàm cung cấp biến dùng chung cho template
 def provide_categories():
     if request.blueprint == "admin":
-        return {"categories": []}
+        return {"categories": [], "unread_notification_count": 0}
+    customer_id = session.get("customer_user_id")
     return {
         "categories": get_categories(),
         "csrf_token": session.setdefault("csrf_token", secrets.token_urlsafe(32)),
+        "unread_notification_count": (
+            get_unread_notification_count(customer_id)
+            if customer_id is not None
+            else 0
+        ),
     }
 
 @app.before_request
@@ -65,12 +78,13 @@ def protect_authentication_forms():
         "login",
         "register",
         "logout",
-        "logout_on_close",
         "edit_customer_account",
         "add_to_cart",
         "remove_from_cart",
         "update_cart_quantity",
         "checkout",
+        "mark_notifications_read",
+        "delete_customer_notification",
     }
     if request.endpoint in protected_form_endpoints:
         session.setdefault("csrf_token", secrets.token_urlsafe(32))
@@ -90,7 +104,7 @@ def home():
     return render_template(
         "home/index.html",
         store_name="Apple Store",
-        products_by_category=products_by_category
+        products_by_category=products_by_category,
     )
 
 
@@ -222,11 +236,11 @@ def product_detail(product_id):
             product = products[0]
             cursor.execute(
                 """--sql
-                SELECT product_id, color, ram, rom, charger_power, price, stock_quantity
+                SELECT product_id, color, ram, rom, charger_power, price,
+                    stock_quantity, is_active
                 FROM Products
                 WHERE category_id = ?
                     AND product_name = ?
-                    AND is_active = 1
                 ORDER BY product_id ASC;
                 """,
                 (product["category_id"], product["product_name"]),
@@ -236,20 +250,77 @@ def product_detail(product_id):
                 if variant["rom"] and not any(
                     option["rom"] == variant["rom"] for option in rom_options
                 ):
+                    matching_variants = [
+                        candidate
+                        for candidate in variants
+                        if candidate["rom"] == variant["rom"]
+                        and candidate["ram"] == product["ram"]
+                        and candidate["charger_power"] == product["charger_power"]
+                    ]
                     matching_variant = next(
                         (
                             candidate
-                            for candidate in variants
-                            if candidate["rom"] == variant["rom"]
-                            and candidate["color"] == product["color"]
-                            and candidate["ram"] == product["ram"]
-                            and candidate["charger_power"] == product["charger_power"]
+                            for candidate in matching_variants
+                            if candidate["color"] == product["color"]
+                            and candidate["is_active"]
                         ),
-                        None,
+                        next(
+                            (
+                                candidate
+                                for candidate in matching_variants
+                                if candidate["is_active"]
+                            ),
+                            next(
+                                (
+                                    candidate
+                                    for candidate in matching_variants
+                                    if candidate["color"] == product["color"]
+                                ),
+                                matching_variants[0] if matching_variants else None,
+                            ),
+                        ),
                     )
                     if matching_variant:
                         rom_options.append(matching_variant)
 
+            selected_variant_id = request.args.get("variant_id")
+            if selected_variant_id is not None:
+                try:
+                    selected_variant_id = int(selected_variant_id)
+                except ValueError:
+                    abort(400, description="Phiên bản sản phẩm không hợp lệ.")
+                if not any(
+                    option["product_id"] == selected_variant_id
+                    for option in rom_options
+                ):
+                    abort(404)
+                cursor.execute(
+                    """--sql
+                    SELECT p.*, c.category_name, c.slug, img.image_url
+                    FROM Products AS p
+                    JOIN Categories AS c ON c.category_id = p.category_id
+                    OUTER APPLY (
+                        SELECT TOP 1 pi.image_url
+                        FROM ProductImages AS pi
+                        WHERE pi.product_id = p.product_id
+                        ORDER BY pi.is_primary DESC, pi.image_id ASC
+                    ) AS img
+                    WHERE p.product_id = ?
+                        AND p.category_id = ?
+                        AND p.product_name = ?;
+                    """,
+                    (
+                        selected_variant_id,
+                        product["category_id"],
+                        product["product_name"],
+                    ),
+                )
+                selected_products = rows_to_dicts(cursor)
+                if not selected_products:
+                    abort(404)
+                product = selected_products[0]
+
+            for variant in variants:
                 if variant["color"] and not any(
                     option["color"] == variant["color"] for option in color_options
                 ):
@@ -261,11 +332,13 @@ def product_detail(product_id):
                             and candidate["rom"] == product["rom"]
                             and candidate["ram"] == product["ram"]
                             and candidate["charger_power"] == product["charger_power"]
+                            and candidate["is_active"]
                         ),
                         None,
                     )
                     if matching_variant:
                         color_options.append(matching_variant)
+
     finally:
         conn.close()
 
@@ -275,12 +348,13 @@ def product_detail(product_id):
     return render_template(
         "products/detail.html",
         store_name="Apple Store",
-        product=products[0],
+        product=product,
+        base_product_id=products[0]["product_id"],
         color_options=color_options,
         rom_options=rom_options,
         supports_engraving=(
-            products[0]["category_name"].casefold() in {"ipad", "airpods"}
-            or "apple pencil" in products[0]["product_name"].casefold()
+            product["category_name"].casefold() in {"ipad", "airpods"}
+            or "apple pencil" in product["product_name"].casefold()
         ),
     )
 
@@ -702,6 +776,14 @@ def checkout():
                     engraving_text or None,
                 ),
             )
+            create_order_notification(
+                cursor,
+                session["customer_user_id"],
+                order_id,
+                "order_placed",
+                "Đặt hàng thành công",
+                f"Đơn hàng #{order_id} đã được tiếp nhận và đang chờ duyệt.",
+            )
         conn.commit()
     except Exception:
         conn.rollback()
@@ -857,12 +939,6 @@ def logout():
     return redirect(url_for("login"))
 
 
-@app.post("/logout-on-close")
-def logout_on_close():
-    session.clear()
-    return "", 204
-
-
 def _load_customer_profile():
     customer_id = session.get("customer_user_id")
     if customer_id is None:
@@ -974,6 +1050,45 @@ def customer_orders():
         store_name="Apple Store",
         orders=list(orders_by_id.values()),
     )
+
+
+@app.get("/account/notifications")
+def customer_notifications():
+    customer_id = session.get("customer_user_id")
+    if customer_id is None:
+        flash("Vui lòng đăng nhập để xem thông báo.", "error")
+        return redirect(url_for("login"))
+
+    notifications = get_customer_notifications(customer_id)
+    return render_template(
+        "account/notifications.html",
+        store_name="Apple Store",
+        notifications=notifications,
+    )
+
+
+@app.post("/account/notifications/read")
+def mark_notifications_read():
+    customer_id = session.get("customer_user_id")
+    if customer_id is None:
+        flash("Vui lòng đăng nhập để cập nhật thông báo.", "error")
+        return redirect(url_for("login"))
+
+    mark_customer_notifications_read(customer_id)
+    return redirect(url_for("customer_notifications"))
+
+
+@app.post("/account/notifications/<int:notification_id>/delete")
+def delete_customer_notification(notification_id):
+    customer_id = session.get("customer_user_id")
+    if customer_id is None:
+        flash("Vui lòng đăng nhập để xóa thông báo.", "error")
+        return redirect(url_for("login"))
+
+    if not delete_notification_record(customer_id, notification_id):
+        abort(404)
+    flash("Thông báo đã được xóa.", "success")
+    return redirect(url_for("customer_notifications"))
 
 
 @app.route("/account/edit", methods=["GET", "POST"])

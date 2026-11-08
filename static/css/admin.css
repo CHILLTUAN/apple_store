@@ -867,12 +867,60 @@ code {
   min-height: 39px;
   padding: 9px 11px;
   border: 1px solid #dfe2e6;
+  box-sizing: border-box;
   border-radius: 7px;
   outline-color: #9bb9e7;
   color: #22262c;
   background: #fff;
   font-size: 12px;
   font-weight: 400;
+}
+
+.password-input-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.password-input-wrap input {
+  display: block;
+  padding-right: 42px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  width: 30px;
+  height: 30px;
+  padding: 5px;
+  border: 0;
+  border-radius: 6px;
+  color: #686e78;
+  background: transparent;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.password-toggle:hover {
+  color: var(--ink);
+  background: #f1f3f5;
+}
+
+.password-toggle svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.password-toggle[aria-pressed="true"] .password-eye-icon,
+.password-toggle[aria-pressed="false"] .password-eye-off-icon {
+  display: none;
 }
 
 .field textarea {

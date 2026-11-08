@@ -83,6 +83,24 @@
               class="shopping-cart-icon"
           /></a>
 
+          {% if session.get('customer_user_id') %}
+          <a
+            href="{{ url_for('customer_notifications') }}"
+            class="notification-link"
+            aria-label="Thông báo{% if unread_notification_count %}, {{ unread_notification_count }} thông báo chưa đọc{% endif %}"
+            title="Thông báo"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="notification-icon">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+            </svg>
+            {% if unread_notification_count %}
+            <span class="notification-count" aria-hidden="true">
+              {{ unread_notification_count if unread_notification_count < 100 else '99+' }}
+            </span>
+            {% endif %}
+          </a>
+          {% endif %}
+
           <button
             type="button"
             id="menu-open"
@@ -222,13 +240,5 @@
 
       <hr class="footer-bottom-divider" />
     </footer>
-    {% if session.get('customer_user_id') or session.get('admin_user_id') or session.get('sales_staff_id') %}
-    <script
-      src="{{ url_for('static', filename='js/logout-on-close.js') }}"
-      data-logout-url="{{ url_for('logout_on_close') }}"
-      data-csrf-token="{{ csrf_token }}"
-      defer
-    ></script>
-    {% endif %}
   </body>
 </html>

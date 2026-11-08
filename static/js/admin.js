@@ -10,3 +10,21 @@ document.querySelectorAll(".admin-flash").forEach((message) => {
     }, 300);
   }, 5000);
 });
+
+document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const inputId = button.dataset.passwordToggle;
+    const passwordInput = inputId ? document.getElementById(inputId) : null;
+    if (!(passwordInput instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const revealPassword = passwordInput.type === "password";
+    passwordInput.type = revealPassword ? "text" : "password";
+    button.setAttribute("aria-pressed", String(revealPassword));
+    button.setAttribute(
+      "aria-label",
+      revealPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu",
+    );
+  });
+});

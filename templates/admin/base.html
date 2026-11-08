@@ -21,9 +21,8 @@
         <a class="{{ 'is-active' if active_nav == 'vouchers' }}" href="{{ url_for('admin.vouchers') }}"><span>％</span>Mã giảm giá</a>
         <a class="{{ 'is-active' if active_nav == 'revenue' }}" href="{{ url_for('admin.revenue') }}"><span>↗</span>Thống kê doanh thu</a>
       </nav>
-      <p class="nav-caption nav-caption-bottom">HỆ THỐNG</p>
+      <p class="nav-caption nav-caption-bottom">CỬA HÀNG</p>
       <nav class="admin-nav">
-        <a class="{{ 'is-active' if active_nav == 'settings' }}" href="{{ url_for('admin.settings') }}"><span>⚙</span>Cài đặt</a>
         <a href="{{ url_for('home') }}"><span>⌂</span>Về cửa hàng</a>
       </nav>
       <div class="sidebar-user">
@@ -64,11 +63,5 @@
       <footer class="admin-footer">Apple Store · Khu vực quản trị</footer>
     </div>
     <script src="{{ url_for('static', filename='js/admin.js') }}" defer></script>
-    <script
-      src="{{ url_for('static', filename='js/logout-on-close.js') }}"
-      data-logout-url="{{ url_for('logout_on_close') }}"
-      data-csrf-token="{{ csrf_token }}"
-      defer
-    ></script>
   </body>
 </html>

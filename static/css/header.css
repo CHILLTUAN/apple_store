@@ -104,6 +104,46 @@
   background-color: #d1d1d6;
 }
 
+.notification-link {
+  position: relative;
+  background-color: #f5f5f7;
+  border-radius: 50%;
+  height: 32px;
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-link:hover {
+  background-color: #d1d1d6;
+}
+
+.notification-icon {
+  height: 19px;
+  width: 19px;
+  fill: none;
+  stroke: #1d1d1f;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.notification-count {
+  position: absolute;
+  top: -5px;
+  right: -6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #d70015;
+  color: #fff;
+  font-size: 10px;
+  line-height: 17px;
+  text-align: center;
+}
+
 .shopping-cart-icon {
   height: 18px;
   width: 18px;

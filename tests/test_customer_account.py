@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 import app as store_app
+import database.notification_repository as notification_repository
 
 
 CUSTOMER = (
@@ -31,6 +32,36 @@ class CustomerAccountCursor:
         if "SELECT user_id, full_name, phone, email, address, username" in query:
             if params[0] == CUSTOMER[0]:
                 self.row = CUSTOMER
+        elif "COUNT(*)" in query and "FROM CustomerNotifications" in query:
+            self.row = (2,)
+        elif "DELETE FROM CustomerNotifications" in query:
+            self.rowcount = 1 if params == (91, CUSTOMER[0]) else 0
+        elif "FROM CustomerNotifications" in query:
+            self.description = [
+                (name,)
+                for name in (
+                    "notification_id",
+                    "order_id",
+                    "notification_type",
+                    "title",
+                    "message",
+                    "is_read",
+                    "created_at",
+                )
+            ]
+            self.rows = [
+                (
+                    91,
+                    73,
+                    "order_approved",
+                    "Đơn hàng đã được duyệt",
+                    "Đơn hàng #73 đã được duyệt và đang được chuẩn bị.",
+                    False,
+                    "2026-11-08 10:00",
+                )
+            ]
+        elif "UPDATE CustomerNotifications" in query:
+            self.rowcount = 1
         elif "SELECT user_id FROM Users" in query and "email = ?" in query:
             self.row = None
         elif "FROM Orders" in query and "WHERE o.user_id = ?" in query:
@@ -115,10 +146,15 @@ class CustomerAccountTests(unittest.TestCase):
         self.connection_patch = patch.object(
             store_app, "get_connection", return_value=self.connection
         )
+        self.notification_connection_patch = patch.object(
+            notification_repository, "get_connection", return_value=self.connection
+        )
         self.categories_patch.start()
         self.connection_patch.start()
+        self.notification_connection_patch.start()
         self.addCleanup(self.categories_patch.stop)
         self.addCleanup(self.connection_patch.stop)
+        self.addCleanup(self.notification_connection_patch.stop)
         with self.client.session_transaction() as current_session:
             current_session["customer_user_id"] = CUSTOMER[0]
             current_session["csrf_token"] = "account-test-token"
@@ -127,6 +163,11 @@ class CustomerAccountTests(unittest.TestCase):
         with patch.object(store_app, "get_home_products", return_value=[]):
             home = self.client.get("/")
         self.assertIn(b'href="/account"', home.data)
+        self.assertIn(b'href="/account/notifications"', home.data)
+        self.assertRegex(
+            home.get_data(as_text=True),
+            r'class="notification-count"[^>]*>\s*2\s*</span>',
+        )
 
         profile = self.client.get("/account")
         self.assertEqual(profile.status_code, 200)
@@ -148,9 +189,68 @@ class CustomerAccountTests(unittest.TestCase):
         self.assertIn("RAM 8GB".encode(), response.data)
         self.assertIn("For Linh".encode(), response.data)
         self.assertIn("2.998 ₫".encode(), response.data)
-        query, params = self.connection.test_cursor.executions[-1]
+        query, params = next(
+            (query, params)
+            for query, params in reversed(self.connection.test_cursor.executions)
+            if "WHERE o.user_id = ?" in query
+        )
         self.assertIn("WHERE o.user_id = ?", query)
         self.assertEqual(params, (CUSTOMER[0],))
+
+    def test_customer_can_view_and_mark_notifications_read(self):
+        response = self.client.get("/account/notifications")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Đơn hàng đã được duyệt".encode(), response.data)
+        self.assertIn("Đơn hàng #73 đã được duyệt".encode(), response.data)
+        self.assertIn(b'action="/account/notifications/read"', response.data)
+        self.assertIn(
+            b'action="/account/notifications/91/delete"',
+            response.data,
+        )
+
+        response = self.client.post(
+            "/account/notifications/read",
+            data={"csrf_token": "account-test-token"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/account/notifications")
+        query, params = self.connection.test_cursor.executions[-1]
+        self.assertIn("UPDATE CustomerNotifications", query)
+        self.assertEqual(params, (CUSTOMER[0],))
+
+    def test_customer_can_delete_their_notification(self):
+        response = self.client.post(
+            "/account/notifications/91/delete",
+            data={"csrf_token": "account-test-token"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/account/notifications")
+        query, params = self.connection.test_cursor.executions[-1]
+        self.assertIn("DELETE FROM CustomerNotifications", query)
+        self.assertIn("notification_id = ? AND user_id = ?", query)
+        self.assertEqual(params, (91, CUSTOMER[0]))
+
+    def test_customer_cannot_delete_another_customers_notification(self):
+        response = self.client.post(
+            "/account/notifications/92/delete",
+            data={"csrf_token": "account-test-token"},
+        )
+
+        self.assertEqual(response.status_code, 404)
+        query, params = self.connection.test_cursor.executions[-1]
+        self.assertIn("DELETE FROM CustomerNotifications", query)
+        self.assertEqual(params, (92, CUSTOMER[0]))
+
+    def test_notifications_require_customer_login(self):
+        with self.client.session_transaction() as current_session:
+            current_session.pop("customer_user_id")
+
+        response = self.client.get("/account/notifications")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/login")
 
     def test_order_tracking_requires_customer_login(self):
         with self.client.session_transaction() as current_session:
@@ -214,15 +314,15 @@ class CustomerAccountTests(unittest.TestCase):
         login_page = self.client.get("/login")
         self.assertIn("Bạn đã đăng xuất.".encode(), login_page.data)
 
-    def test_browser_close_signal_clears_the_signed_in_session(self):
-        response = self.client.post(
-            "/logout-on-close",
-            data={"csrf_token": "account-test-token"},
-        )
+    def test_page_refresh_keeps_customer_signed_in(self):
+        with patch.object(store_app, "get_home_products", return_value=[]):
+            response = self.client.get("/")
 
-        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(b"logout-on-close.js", response.data)
         with self.client.session_transaction() as current_session:
-            self.assertNotIn("customer_user_id", current_session)
+            self.assertEqual(current_session["customer_user_id"], CUSTOMER[0])
+            self.assertFalse(current_session.permanent)
 
     def test_account_page_requires_customer_login(self):
         with self.client.session_transaction() as current_session:
