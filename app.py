@@ -77,6 +77,7 @@ def protect_authentication_forms():
     protected_form_endpoints = {
         "login",
         "register",
+        "forgot_password",
         "logout",
         "edit_customer_account",
         "add_to_cart",
@@ -927,6 +928,75 @@ def login():
         store_name="Apple Store",
         csrf_token=session.get("csrf_token", ""),
     )
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+@app.route("/forgot_password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        old_password = request.form.get("old_password", "")
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if (
+            not username
+            or not old_password
+            or len(password) < 8
+            or password != confirm_password
+        ):
+            flash("Vui lòng kiểm tra lại thông tin đặt lại mật khẩu.", "error")
+            return render_template(
+                "auth/forgot_password.html",
+                store_name="Apple Store",
+                csrf_token=session.get("csrf_token", ""),
+            )
+
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """--sql
+                SELECT user_id, password_hash
+                FROM Users
+                WHERE username = ? AND is_active = 1;
+                """,
+                (username,),
+            )
+            user = cursor.fetchone()
+            if not user or not check_password_hash(user[1], old_password):
+                flash("Tên đăng nhập hoặc mật khẩu cũ không đúng.", "error")
+                return render_template(
+                    "auth/forgot_password.html",
+                    store_name="Apple Store",
+                    csrf_token=session.get("csrf_token", ""),
+                )
+
+            cursor.execute(
+                """--sql
+                UPDATE Users
+                SET password_hash = ?
+                WHERE user_id = ?;
+                """,
+                (generate_password_hash(password), user[0]),
+            )
+            if cursor.rowcount != 1:
+                abort(409, description="Không thể đặt lại mật khẩu cho tài khoản này.")
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+        flash("Mật khẩu của bạn đã được đặt lại thành công. Vui lòng đăng nhập lại.", "success")
+        return redirect(url_for("login"))
+
+    return render_template(
+        "auth/forgot_password.html",
+        store_name="Apple Store",
+        csrf_token=session.get("csrf_token", ""),
+    )
+
 
 @app.post("/logout")
 def logout():

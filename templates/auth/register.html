@@ -68,23 +68,41 @@
 
     <div class="password">
       <label for="password">Mật khẩu</label>
-      <input
-        type="password"
-        id="password"
-        name="password"
-        minlength="8"
-        autocomplete="new-password"
-        required
-      >
+      <div class="password-input-wrapper">
+        <input
+          type="password"
+          id="password"
+          name="password"
+          minlength="8"
+          autocomplete="new-password"
+          required
+        >
+        <button class="password-visibility-toggle" type="button" aria-controls="password" aria-label="Hiện mật khẩu" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+            <path class="password-visibility-slash" d="m3 3 18 18"></path>
+          </svg>
+        </button>
+      </div>
       <label for="confirm_password">Xác nhận mật khẩu</label>
-      <input
-        type="password"
-        id="confirm_password"
-        name="confirm_password"
-        minlength="8"
-        autocomplete="new-password"
-        required
-      >
+      <div class="password-input-wrapper">
+        <input
+          type="password"
+          id="confirm_password"
+          name="confirm_password"
+          minlength="8"
+          autocomplete="new-password"
+          required
+        >
+        <button class="password-visibility-toggle" type="button" aria-controls="confirm_password" aria-label="Hiện mật khẩu" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+            <path class="password-visibility-slash" d="m3 3 18 18"></path>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <div class="button">
@@ -92,7 +110,7 @@
     </div>
   </form>
 
-  <div class="login-option">
+  <div class="login-option register-login-option">
     <p>Bạn đã có tài khoản?</p>
     <a href="{{ url_for('login') }}">Đăng nhập</a>
   </div>

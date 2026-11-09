@@ -36,6 +36,25 @@ class FakeCursor:
                 "revenue_year",
             )]
             self.rows = [(6, 100000, 200000, 300000)]
+        elif "AS quantity_sold" in query:
+            self.description = [
+                (name,)
+                for name in (
+                    "product_id",
+                    "product_name",
+                    "ram",
+                    "rom",
+                    "color",
+                    "charger_power",
+                    "quantity_sold",
+                    "revenue",
+                )
+            ]
+            self.rows = [
+                (17, "iPhone 17 Pro", "8 GB", "256 GB", "Black", None, 4, 400000),
+                (18, "iPhone 17 Pro Max", "8 GB", "512 GB", "Silver", None, 4, 450000),
+                (19, "MacBook Air", "16 GB", "256 GB", "Blue", None, 2, 200000),
+            ]
         elif "SUM(total_amount)" in query:
             self.description = [(name,) for name in ("month_start", "revenue")]
 
@@ -234,6 +253,31 @@ class AdminAuthenticationTests(unittest.TestCase):
         response = self.client.get("/admin/")
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.headers["Location"].startswith("/login?next="))
+
+    def test_revenue_report_shows_best_selling_product_variant(self):
+        self._login_admin()
+
+        response = self.client.get("/admin/revenue")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Sản phẩm bán chạy nhất".encode(), response.data)
+        self.assertIn("Số lượng bán theo phiên bản".encode(), response.data)
+        self.assertIn("iPhone 17 Pro".encode(), response.data)
+        self.assertIn("8 GB".encode(), response.data)
+        self.assertIn("256 GB".encode(), response.data)
+        self.assertIn("Black".encode(), response.data)
+        self.assertEqual(response.data.count("iPhone 17 Pro Max".encode()), 2)
+        self.assertEqual(response.data.count("MacBook Air".encode()), 1)
+        product_sales_query = next(
+            query
+            for query in FakeCursor.executed_queries
+            if "AS quantity_sold" in query
+        )
+        self.assertIn(
+            "GROUP BY p.product_id, p.product_name, p.ram, p.rom, p.color",
+            product_sales_query,
+        )
+        self.assertIn("ORDER BY quantity_sold DESC", product_sales_query)
 
     def test_user_management_page_renders(self):
         self._login_admin()

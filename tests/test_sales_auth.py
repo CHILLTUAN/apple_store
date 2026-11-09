@@ -150,9 +150,19 @@ class SalesCursor:
             self.rows = [(0, 0)]
         elif "AS quantity_sold" in query:
             self.description = [
+                ("product_id",),
                 ("product_name",),
+                ("ram",),
+                ("rom",),
+                ("color",),
+                ("charger_power",),
                 ("quantity_sold",),
                 ("revenue",),
+            ]
+            self.rows = [
+                (17, "iPhone 17 Pro", "8 GB", "256 GB", "Black", None, 4, 400000),
+                (18, "iPhone 17 Pro Max", "8 GB", "512 GB", "Silver", None, 4, 450000),
+                (19, "MacBook Air", "16 GB", "256 GB", "Blue", None, 2, 200000),
             ]
 
     def fetchone(self):
@@ -326,6 +336,23 @@ class SalesAuthenticationTests(unittest.TestCase):
         )
         self.assertEqual(report.status_code, 200)
         self.assertIn("Báo cáo bán hàng".encode(), report.data)
+        self.assertIn("Sản phẩm bán chạy nhất".encode(), report.data)
+        self.assertIn("iPhone 17 Pro".encode(), report.data)
+        self.assertIn("8 GB".encode(), report.data)
+        self.assertIn("256 GB".encode(), report.data)
+        self.assertIn("Black".encode(), report.data)
+        self.assertEqual(report.data.count("iPhone 17 Pro Max".encode()), 2)
+        self.assertEqual(report.data.count("MacBook Air".encode()), 1)
+        product_sales_query = next(
+            query
+            for query, _ in SalesCursor.executions
+            if "AS quantity_sold" in query
+        )
+        self.assertIn(
+            "GROUP BY p.product_id, p.product_name, p.ram, p.rom, p.color",
+            product_sales_query,
+        )
+        self.assertIn("ORDER BY quantity_sold DESC", product_sales_query)
 
     def test_preparing_order_shows_status_line_and_cancel_delivery_button(self):
         SalesCursor.listed_order_status = "Đang chuẩn bị"
@@ -336,8 +363,18 @@ class SalesAuthenticationTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Đang chuẩn bị".encode("utf-8"), response.data)
+        self.assertIn("Hoàn thành đơn".encode("utf-8"), response.data)
+        self.assertIn('value="Đã giao"'.encode("utf-8"), response.data)
+        self.assertIn(
+            "Xác nhận đơn hàng này đã hoàn tất?".encode("utf-8"),
+            response.data,
+        )
         self.assertIn("Hủy giao".encode("utf-8"), response.data)
         self.assertIn('value="Đã hủy"'.encode("utf-8"), response.data)
+        self.assertIn(
+            "Bạn có chắc muốn hủy giao và hủy đơn hàng này?".encode("utf-8"),
+            response.data,
+        )
         self.assertNotIn(b">C\xe1\xba\xadp nh\xe1\xba\xadt</button>", response.data)
         self.assertNotIn(b'<select name="order_status"', response.data)
 

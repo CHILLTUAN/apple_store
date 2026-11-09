@@ -580,7 +580,8 @@ def reports():
         totals = rows_to_dicts(cursor)[0]
         cursor.execute(
             """--sql
-            SELECT p.product_name, SUM(d.quantity) AS quantity_sold,
+            SELECT p.product_id, p.product_name, p.ram, p.rom, p.color,
+                p.charger_power, SUM(d.quantity) AS quantity_sold,
                 SUM(d.quantity * d.unit_price) AS revenue
             FROM Orders AS o
             JOIN OrderDetails AS d ON d.order_id = o.order_id
@@ -588,12 +589,22 @@ def reports():
             WHERE o.order_status <> N'Đã hủy'
                 AND o.order_date >= CAST(? AS DATE)
                 AND o.order_date < DATEADD(DAY, 1, CAST(? AS DATE))
-            GROUP BY p.product_name
-            ORDER BY revenue DESC, p.product_name ASC;
+            GROUP BY p.product_id, p.product_name, p.ram, p.rom, p.color,
+                p.charger_power
+            ORDER BY quantity_sold DESC, revenue DESC, p.product_name ASC;
             """,
             (start_date, end_date),
         )
         product_sales = rows_to_dicts(cursor)
+        best_sellers = (
+            [
+                product
+                for product in product_sales
+                if product["quantity_sold"] == product_sales[0]["quantity_sold"]
+            ]
+            if product_sales
+            else []
+        )
     finally:
         conn.close()
     return render_template(
@@ -601,6 +612,7 @@ def reports():
         title="Báo cáo bán hàng",
         totals=totals,
         product_sales=product_sales,
+        best_sellers=best_sellers,
         from_date=start_date,
         to_date=end_date,
         active_nav="reports",

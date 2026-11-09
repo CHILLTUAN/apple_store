@@ -74,6 +74,35 @@ class OrderInventoryTests(unittest.TestCase):
         self.assertFalse(cursor.stock_committed)
         self.assertIn("không được duyệt", cursor.notifications[0][4])
 
+    def test_completing_preparing_order_notifies_customer(self):
+        cursor = InventoryCursor()
+        update_order_status(cursor, 1, "Đang chuẩn bị")
+
+        update_order_status(cursor, 1, "Đã giao")
+
+        self.assertEqual(cursor.status, "Đã giao")
+        self.assertEqual(cursor.notifications[1][2], "order_completed")
+        self.assertIn("hoàn tất", cursor.notifications[1][4])
+
+    def test_completing_in_transit_order_notifies_customer(self):
+        cursor = InventoryCursor(status="Đang giao", stock_committed=True)
+
+        update_order_status(cursor, 1, "Đã giao")
+
+        self.assertEqual(cursor.status, "Đã giao")
+        self.assertEqual(cursor.notifications[0][2], "order_completed")
+
+    def test_completed_order_cannot_be_cancelled_or_deleted(self):
+        cursor = InventoryCursor(status="Đã giao", stock_committed=True)
+
+        with self.assertRaises(OrderStatusTransitionError):
+            update_order_status(cursor, 1, "Đã hủy")
+
+        self.assertEqual(cursor.status, "Đã giao")
+        self.assertTrue(cursor.stock_committed)
+        self.assertEqual(cursor.stock, 5)
+        self.assertEqual(cursor.notifications, [])
+
     def test_approval_fails_without_enough_stock(self):
         cursor = InventoryCursor(stock=1)
         with self.assertRaises(OrderStatusTransitionError):

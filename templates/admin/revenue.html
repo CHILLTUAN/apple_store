@@ -9,4 +9,39 @@
   </tbody></table></div>
   {% else %}<div class="empty-state">Chưa có dữ liệu doanh thu trong 12 tháng gần nhất.</div>{% endif %}
 </section>
+<section class="panel">
+  <div class="panel-heading"><div><h2>Sản phẩm bán chạy nhất</h2><p>Dựa trên số lượng bán trong 12 tháng gần nhất, không bao gồm đơn đã hủy</p></div></div>
+  {% if best_sellers %}
+  <div class="table-wrap"><table><thead><tr><th>Sản phẩm</th><th>RAM</th><th>ROM</th><th>Màu sắc</th><th>Công suất sạc</th><th>Số lượng đã bán</th></tr></thead><tbody>
+    {% for best_seller in best_sellers %}
+    <tr>
+      <td class="strong">{{ best_seller.product_name }}</td>
+      <td>{{ best_seller.ram or "—" }}</td>
+      <td>{{ best_seller.rom or "—" }}</td>
+      <td>{{ best_seller.color or "—" }}</td>
+      <td>{{ best_seller.charger_power or "—" }}</td>
+      <td class="strong">{{ best_seller.quantity_sold }}</td>
+    </tr>
+    {% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="empty-state">Chưa có dữ liệu sản phẩm đã bán trong 12 tháng gần nhất.</div>{% endif %}
+</section>
+<section class="panel">
+  <div class="panel-heading"><div><h2>Số lượng bán theo phiên bản</h2><p>Phân loại theo RAM, ROM và màu sắc · 12 tháng gần nhất</p></div></div>
+  {% if product_sales %}
+  <div class="table-wrap"><table><thead><tr><th>Sản phẩm</th><th>RAM</th><th>ROM</th><th>Màu sắc</th><th>Công suất sạc</th><th>Số lượng đã bán</th><th>Doanh thu</th></tr></thead><tbody>
+    {% for item in product_sales %}
+    <tr>
+      <td class="strong">{{ item.product_name }}</td>
+      <td>{{ item.ram or "—" }}</td>
+      <td>{{ item.rom or "—" }}</td>
+      <td>{{ item.color or "—" }}</td>
+      <td>{{ item.charger_power or "—" }}</td>
+      <td>{{ item.quantity_sold }}</td>
+      <td class="strong">{{ item.revenue|vnd }}</td>
+    </tr>
+    {% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="empty-state">Chưa có dữ liệu sản phẩm đã bán trong 12 tháng gần nhất.</div>{% endif %}
+</section>
 {% endblock %}

@@ -224,17 +224,14 @@
 
         <div class="account">
           <p>Tài khoản</p>
-          <a href="#">Quản Lý Tài Khoản</a>
-          <a href="#">Đơn Hàng Của Tôi</a>
-          <a href="#">Giỏ Hàng</a>
+          <a href="{{ url_for('customer_account') }}">Quản Lý Tài Khoản</a>
+          <a href="{{ url_for('customer_orders') }}">Đơn Hàng Của Tôi</a>
+          <a href="{{ url_for('cart_page') }}">Giỏ Hàng</a>
         </div>
 
         <div class="apple-store">
           <p>Apple Store</p>
-          <a href="#">Trạng Thái Đơn Hàng</a>
-          <a href="#">Hỗ Trợ Mua Hàng</a>
-          <a href="#">Liên Hệ</a>
-          <a href="{{ url_for('sales.dashboard') }}">Trang nhân viên bán hàng</a>
+          <a href="{{ url_for('customer_orders') }}">Trạng Thái Đơn Hàng</a>
         </div>
       </nav>
 

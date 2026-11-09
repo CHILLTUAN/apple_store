@@ -79,11 +79,51 @@ CSS for the login page
   color: #060606;
   font-size: 14px;
 }
+.password-input-wrapper {
+  position: relative;
+  width: 400px;
+}
+.password-input-wrapper input {
+  box-sizing: border-box;
+  width: 100%;
+  padding-right: 64px;
+}
+.password-visibility-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  border: 0;
+  padding: 2px;
+  background: transparent;
+  color: #060606;
+  cursor: pointer;
+}
+.password-visibility-toggle svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.password-visibility-slash {
+  display: none;
+}
+.password-visibility-toggle[aria-pressed="true"] .password-visibility-slash {
+  display: block;
+}
+.password-visibility-toggle:focus-visible {
+  outline: 2px solid #060606;
+  outline-offset: 2px;
+}
 .option {
   width: 400px;
   display: flex;
   flex-direction: row;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   margin-bottom: 10px;
   margin-top: 10px;
@@ -98,12 +138,21 @@ CSS for the login page
 }
 .forgot-password-group {
   width: 150px;
-  text-align: right;
+  text-align: left;
   margin-top: 8px;
   margin-bottom: 20px;
   text-decoration: none;
   font-size: 14px;
   cursor: pointer;
+}
+
+.forgot-password-group a {
+  color: #060606;
+  text-decoration: none;
+}
+
+.forgot-password-group a:hover {
+  text-decoration: underline;
 }
 
 .button {
@@ -138,6 +187,14 @@ CSS for the login page
   gap: 5px;
   color: #060606;
 }
+.login-option p {
+  margin: 0;
+}
+.register-login-option {
+  width: 400px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
 .login-option a {
   text-decoration: none;
   cursor: pointer;
@@ -154,6 +211,10 @@ CSS for the login page
   font-size: 12px;
   line-height: 1.5;
   text-align: center;
+}
+
+.forgot-password-border {
+  margin-bottom: 50px;
 }
 
 /* CSS for register page */
@@ -265,7 +326,6 @@ CSS for the login page
   color: #060606;
   font-size: 14px;
 }
-
 .button {
   width: 400px;
   display: flex;

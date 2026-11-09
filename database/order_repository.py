@@ -11,7 +11,7 @@ class OrderStatusTransitionError(ValueError):
 
 ORDER_TRANSITIONS = {
     "Chờ duyệt": ("Đang chuẩn bị", "Đã hủy"),
-    "Đang chuẩn bị": ("Đang giao", "Đã hủy"),
+    "Đang chuẩn bị": ("Đang giao", "Đã giao", "Đã hủy"),
     "Đang giao": ("Đã giao", "Đã hủy"),
     "Đã giao": (),
     "Đã hủy": (),
@@ -21,6 +21,17 @@ ORDER_STATUS_OPTIONS = {
     status: (status, *next_statuses)
     for status, next_statuses in ORDER_TRANSITIONS.items()
 }
+
+
+def _notify_order_completed(cursor, user_id, order_id):
+    create_order_notification(
+        cursor,
+        user_id,
+        order_id,
+        "order_completed",
+        "Đơn hàng đã hoàn tất",
+        f"Đơn hàng #{order_id} đã được giao hoàn tất. Cảm ơn bạn đã mua hàng.",
+    )
 
 
 def update_order_status(cursor, order_id, new_status):
@@ -131,7 +142,9 @@ def update_order_status(cursor, order_id, new_status):
             """,
             (new_status, order_id),
         )
-        if new_status == "Đang chuẩn bị":
+        if new_status == "Đã giao":
+            _notify_order_completed(cursor, user_id, order_id)
+        elif new_status == "Đang chuẩn bị":
             create_order_notification(
                 cursor,
                 user_id,
@@ -146,6 +159,8 @@ def update_order_status(cursor, order_id, new_status):
         "UPDATE Orders SET order_status = ? WHERE order_id = ?;",
         (new_status, order_id),
     )
+    if new_status == "Đã giao":
+        _notify_order_completed(cursor, user_id, order_id)
     if new_status == "Đang chuẩn bị":
         create_order_notification(
             cursor,

@@ -29,18 +29,27 @@
 
         <div class="password">
             <label for="password_id">Mật khẩu</label>
-            <input
-                type="password"
-                id="password_id"
-                name="password"
-                placeholder="Mật khẩu"
-                required
-            >
+            <div class="password-input-wrapper">
+                <input
+                    type="password"
+                    id="password_id"
+                    name="password"
+                    placeholder="Mật khẩu"
+                    required
+                >
+                <button class="password-visibility-toggle" type="button" aria-controls="password_id" aria-label="Hiện mật khẩu" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path class="password-visibility-slash" d="m3 3 18 18"></path>
+                    </svg>
+                </button>
+            </div>
         </div>
 
         <div class="option">
-            <div class="forgot-passwork-group">
-                <a href="#">Quên mật khẩu?</a>
+            <div class="forgot-password-group">
+                <a href="{{ url_for('forgot_password') }}">Quên mật khẩu?</a>
             </div>
         </div>
 

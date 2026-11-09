@@ -26,13 +26,17 @@
         {% elif order.order_status == "Đang chuẩn bị" %}
         <div class="approval-actions">
           <span class="order-status-text">{{ order.order_status }}</span>
+          <form method="post" action="{{ url_for('admin.update_order_status', order_id=order.order_id) }}" onsubmit="return confirm('Xác nhận đơn hàng này đã hoàn tất?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="button button-small button-approve" type="submit" name="order_status" value="Đã giao">Hoàn thành đơn</button>
+          </form>
           <form method="post" action="{{ url_for('admin.update_order_status', order_id=order.order_id) }}" onsubmit="return confirm('Bạn có chắc muốn hủy giao và hủy đơn hàng này?')">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button class="button button-small button-danger" type="submit" name="order_status" value="Đã hủy">Hủy giao</button>
           </form>
         </div>
         {% elif status_options[order.order_status]|length > 1 %}
-        <form class="status-form" method="post" action="{{ url_for('admin.update_order_status', order_id=order.order_id) }}">
+        <form class="status-form" method="post" action="{{ url_for('admin.update_order_status', order_id=order.order_id) }}" {% if "Đã giao" in status_options[order.order_status] %}onsubmit="return confirm(this.elements.order_status.value === 'Đã giao' ? 'Xác nhận đơn hàng này đã hoàn tất?' : 'Bạn có chắc muốn hủy giao và hủy đơn hàng này?')"{% endif %}>
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <select name="order_status" aria-label="Trạng thái đơn {{ order.order_id }}">
             {% for status in status_options[order.order_status] %}<option value="{{ status }}" {% if order.order_status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}

@@ -7,6 +7,23 @@ const menuOverlay = document.querySelector("#menu-overlay");
 const menuClose = document.querySelector("#menu-close");
 // querySelector(): tìm phần tử đầu tiên khớp với selector truyền vào.
 
+document.querySelectorAll(".password-visibility-toggle").forEach((button) => {
+  button.addEventListener("click", () => {
+    const passwordInput = document.getElementById(button.getAttribute("aria-controls"));
+    if (!passwordInput) {
+      return;
+    }
+
+    const isVisible = passwordInput.type === "text";
+    passwordInput.type = isVisible ? "password" : "text";
+    button.setAttribute(
+      "aria-label",
+      isVisible ? "Hiện mật khẩu" : "Ẩn mật khẩu",
+    );
+    button.setAttribute("aria-pressed", String(!isVisible));
+  });
+});
+
 document.querySelectorAll(".flash-message").forEach((message) => {
   setTimeout(() => {
     message.classList.add("is-dismissing");
