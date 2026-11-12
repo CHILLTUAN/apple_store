@@ -83,12 +83,11 @@
               class="shopping-cart-icon"
           /></a>
 
-          {% if session.get('customer_user_id') %}
           <a
             href="{{ url_for('customer_notifications') }}"
             class="notification-link"
-            aria-label="Thông báo{% if unread_notification_count %}, {{ unread_notification_count }} thông báo chưa đọc{% endif %}"
-            title="Thông báo"
+            aria-label="{% if session.get('customer_user_id') %}Thông báo{% if unread_notification_count %}, {{ unread_notification_count }} thông báo chưa đọc{% endif %}{% else %}Đăng nhập để xem thông báo{% endif %}"
+            title="{% if session.get('customer_user_id') %}Thông báo{% else %}Đăng nhập để xem thông báo{% endif %}"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" class="notification-icon">
               <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
@@ -99,7 +98,6 @@
             </span>
             {% endif %}
           </a>
-          {% endif %}
 
           <button
             type="button"
