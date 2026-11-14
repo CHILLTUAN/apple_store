@@ -6,10 +6,11 @@ from decimal import Decimal, InvalidOperation
 from urllib.parse import urlsplit
 
 import click
-from itsdangerous import BadSignature, URLSafeSerializer
-from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 from dotenv import load_dotenv
+from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
+from itsdangerous import BadSignature, URLSafeSerializer
 from werkzeug.security import check_password_hash, generate_password_hash
+
 from database.category_repository import get_categories
 from database.connection import get_connection
 from database.notification_repository import (
@@ -26,12 +27,41 @@ from routes.sales import sales_bp
 
 load_dotenv()
 
+APP_NAME = "Apple Store"
+PROTECTED_FORM_ENDPOINTS = {
+    "login",
+    "register",
+    "forgot_password",
+    "logout",
+    "edit_customer_account",
+    "add_to_cart",
+    "remove_from_cart",
+    "update_cart_quantity",
+    "checkout",
+    "mark_notifications_read",
+    "delete_customer_notification",
+}
+PAYMENT_METHOD_LABELS = {
+    "cod": "Thanh toán khi nhận hàng",
+    "bank_transfer": "Chuyển khoản ngân hàng",
+    "credit_card": "Thẻ tín dụng quốc tế (nhân viên hướng dẫn)",
+    "domestic_card": "Thẻ ATM nội địa (nhân viên hướng dẫn)",
+    "momo": "Ví MoMo (nhân viên hướng dẫn)",
+    "credit_installment": "Trả góp qua thẻ tín dụng",
+    "momo_installment": "Trả góp qua MoMo",
+}
+INSTALLMENT_OPTIONS = {
+    "credit_installment": {"3", "6", "9", "12"},
+    "momo_installment": {"6", "12", "18", "24"},
+}
+PHONE_RE = re.compile(r"^[0-9+()\- ]+$")
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
 app = Flask(__name__)
 app.register_blueprint(admin_bp)
 app.register_blueprint(sales_bp)
-app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY")
-if not app.config["SECRET_KEY"]:
-    app.config["SECRET_KEY"] = secrets.token_hex(32)
+app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY") or secrets.token_hex(32)
+if not os.getenv("FLASK_SECRET_KEY"):
     app.logger.warning(
         "FLASK_SECRET_KEY is not set; sessions will be invalidated when the app restarts."
     )
@@ -42,9 +72,14 @@ order_receipt_serializer = URLSafeSerializer(
 
 
 def format_vnd(price):
-    return f"{price:,.0f}".replace(',', '.') + " ₫"
-# Đăng ký hàm thành filter để Jinja có thể sử dụng trong template.
+    return f"{price:,.0f}".replace(",", ".") + " ₫"
+
+
 app.jinja_env.filters["vnd"] = format_vnd
+
+
+def _csrf_token():
+    return session.setdefault("csrf_token", secrets.token_urlsafe(32))
 
 
 def _require_customer_login(next_url, return_url):
@@ -56,39 +91,92 @@ def _require_customer_login(next_url, return_url):
     return redirect(return_url)
 
 
-@app.context_processor 
-# Đăng ký hàm cung cấp biến dùng chung cho template
+def _is_safe_local_redirect(target):
+    if not target or not target.startswith("/"):
+        return False
+    if target.startswith("//") or "\\" in target:
+        return False
+    parsed_url = urlsplit(target)
+    return not parsed_url.netloc and not parsed_url.scheme
+
+
+def _validate_phone(phone):
+    if not phone or len(phone) > 15 or not PHONE_RE.fullmatch(phone):
+        return False
+    return 7 <= sum(character.isdigit() for character in phone) <= 15
+
+
+def _validate_email(email):
+    if not email:
+        return True
+    return len(email) <= 100 and bool(EMAIL_RE.fullmatch(email))
+
+
+def _render(template_name, **context):
+    context.setdefault("store_name", APP_NAME)
+    return render_template(template_name, **context)
+
+
+def _form(template_name, **context):
+    context.setdefault("csrf_token", _csrf_token())
+    return _render(template_name, **context)
+
+
+def _clear_auth_session():
+    for key in ("csrf_token", "admin_user_id", "sales_staff_id", "customer_user_id", "login_next"):
+        session.pop(key, None)
+
+
+def _customer_required(message):
+    if session.get("customer_user_id") is None:
+        flash(message, "error")
+        return redirect(url_for("login"))
+    return None
+
+
+def _customer_id_required(message):
+    customer_id = session.get("customer_user_id")
+    if customer_id is None:
+        flash(message, "error")
+        return None
+    return customer_id
+
+
+def _flash_redirect(endpoint, message, category="success", **params):
+    flash(message, category)
+    return redirect(url_for(endpoint, **params))
+
+
+def _resolve_payment_method(payment_choice, installment_months=""):
+    if payment_choice in INSTALLMENT_OPTIONS:
+        if installment_months not in INSTALLMENT_OPTIONS[payment_choice]:
+            return None, "Kỳ hạn trả góp không hợp lệ."
+        provider = "thẻ tín dụng" if payment_choice == "credit_installment" else "MoMo"
+        return f"Trả góp {provider} - {installment_months} tháng", None
+    if payment_choice not in PAYMENT_METHOD_LABELS:
+        return None, "Phương thức thanh toán không hợp lệ."
+    return PAYMENT_METHOD_LABELS[payment_choice], None
+
+
+@app.context_processor
 def provide_categories():
     if request.blueprint == "admin":
         return {"categories": [], "unread_notification_count": 0}
+
     customer_id = session.get("customer_user_id")
     return {
         "categories": get_categories(),
-        "csrf_token": session.setdefault("csrf_token", secrets.token_urlsafe(32)),
+        "csrf_token": _csrf_token(),
         "unread_notification_count": (
-            get_unread_notification_count(customer_id)
-            if customer_id is not None
-            else 0
+            get_unread_notification_count(customer_id) if customer_id is not None else 0
         ),
     }
 
+
 @app.before_request
 def protect_authentication_forms():
-    protected_form_endpoints = {
-        "login",
-        "register",
-        "forgot_password",
-        "logout",
-        "edit_customer_account",
-        "add_to_cart",
-        "remove_from_cart",
-        "update_cart_quantity",
-        "checkout",
-        "mark_notifications_read",
-        "delete_customer_notification",
-    }
-    if request.endpoint in protected_form_endpoints:
-        session.setdefault("csrf_token", secrets.token_urlsafe(32))
+    if request.endpoint in PROTECTED_FORM_ENDPOINTS:
+        _csrf_token()
         if request.method == "POST" and not hmac.compare_digest(
             session["csrf_token"], request.form.get("csrf_token", "")
         ):
@@ -97,16 +185,11 @@ def protect_authentication_forms():
 
 @app.route("/")
 def home():
-    products = get_home_products()
     products_by_category = {}
-    for product in products:
+    for product in get_home_products():
         products_by_category.setdefault(product["category_name"], []).append(product)
 
-    return render_template(
-        "home/index.html",
-        store_name="Apple Store",
-        products_by_category=products_by_category,
-    )
+    return _render("home/index.html", products_by_category=products_by_category)
 
 
 def _catalog_filters(category_id=None):
@@ -128,6 +211,7 @@ def _catalog_filters(category_id=None):
         if not value.is_finite() or value < 0:
             abort(400, description="Khoảng giá không hợp lệ.")
         prices[field] = value
+
     if (
         prices["min_price"] is not None
         and prices["max_price"] is not None
@@ -148,26 +232,15 @@ def _catalog_filters(category_id=None):
 def search_products():
     filters = _catalog_filters()
     products = get_catalog_products(**filters)
-    return render_template(
-        "products/search.html",
-        store_name="Apple Store",
-        products=products,
-        filters=filters,
-    )
+    return _render("products/search.html", products=products, filters=filters)
 
 
-# /mac /ipad /iphone /watch /airpods /phu-kien
 @app.route("/<category_slug>")
 def category_page(category_slug):
-
-    categories_map = {}
-    for record in get_categories():        
-        categories_map[record["slug"]] = record
-    
-    category = categories_map.get(category_slug, None)
+    categories_map = {record["slug"]: record for record in get_categories()}
+    category = categories_map.get(category_slug)
     if category is None:
         return "Không tìm thấy danh mục", 404
-    # Phòng trường hợp /login, /register, . . .
 
     filters = _catalog_filters(category["category_id"])
     products = get_catalog_products(**filters)
@@ -175,7 +248,6 @@ def category_page(category_slug):
     products_by_name = {}
     for product in products:
         name = product["product_name"]
-
         grouped_product = products_by_name.setdefault(
             name,
             {
@@ -194,17 +266,13 @@ def category_page(category_slug):
             "stock_quantity": product["stock_quantity"],
         }
         if not any(
-            all(
-                existing[field] == option[field]
-                for field in ("ram", "rom", "charger_power", "price")
-            )
+            all(existing[field] == option[field] for field in ("ram", "rom", "charger_power", "price"))
             for existing in grouped_product["descriptions"]
         ):
             grouped_product["descriptions"].append(option)
 
-    return render_template(
+    return _render(
         "products/list.html",
-        store_name="Apple Store",
         category_name=category["category_name"],
         products=list(products_by_name.values()),
         filters=filters,
@@ -346,9 +414,8 @@ def product_detail(product_id):
     if not products:
         abort(404)
 
-    return render_template(
+    return _render(
         "products/detail.html",
-        store_name="Apple Store",
         product=product,
         base_product_id=products[0]["product_id"],
         color_options=color_options,
@@ -370,7 +437,7 @@ def cart_page():
 
     cart = session.get("cart", {})
     if not cart:
-        return render_template("cart/index.html", store_name="Apple Store", items=[], total=0)
+        return _render("cart/index.html", items=[], total=0)
 
     product_ids = [int(product_id) for product_id in cart]
     placeholders = ", ".join("?" for _ in product_ids)
@@ -424,13 +491,7 @@ def cart_page():
 
     total = sum((item["line_total"] for item in items), 0)
     can_checkout = all(item["stock_available"] for item in items)
-    return render_template(
-        "cart/index.html",
-        store_name="Apple Store",
-        items=items,
-        total=total,
-        can_checkout=can_checkout,
-    )
+    return _render("cart/index.html", items=items, total=total, can_checkout=can_checkout)
 
 @app.post("/cart/items/<int:product_id>")
 def add_to_cart(product_id):
@@ -473,27 +534,24 @@ def add_to_cart(product_id):
     ):
         abort(400, description="Nội dung khắc không hợp lệ hoặc sản phẩm không hỗ trợ khắc.")
     if product[0] < 1:
-        flash("Sản phẩm hiện đã hết hàng.", "error")
-        return redirect(url_for("product_detail", product_id=product_id))
+        return _flash_redirect("product_detail", "Sản phẩm hiện đã hết hàng.", "error", product_id=product_id)
     if cart.get(product_key, 0) >= product[0]:
-        flash("Số lượng trong giỏ đã đạt tồn kho hiện có.", "error")
-        return redirect(url_for("product_detail", product_id=product_id))
+        return _flash_redirect("product_detail", "Số lượng trong giỏ đã đạt tồn kho hiện có.", "error", product_id=product_id)
     current_engraving = session.get("cart_engraving", {}).get(product_key, "")
     if cart.get(product_key, 0) and current_engraving != engraving_text:
-        flash(
+        return _flash_redirect(
+            "cart_page",
             "Mỗi cấu hình sản phẩm chỉ hỗ trợ một nội dung khắc trong mỗi đơn. "
             "Hãy xóa sản phẩm hiện tại trước khi chọn nội dung khác.",
             "error",
         )
-        return redirect(url_for("cart_page"))
     cart[product_key] = cart.get(product_key, 0) + 1
     session["cart"] = cart
     if engraving_text:
         engravings = session.get("cart_engraving", {})
         engravings[product_key] = engraving_text
         session["cart_engraving"] = engravings
-    flash("Sản phẩm đã được thêm vào giỏ hàng", "success")
-    return redirect(url_for("cart_page"))
+    return _flash_redirect("cart_page", "Sản phẩm đã được thêm vào giỏ hàng")
 
 @app.post("/cart/items/<int:product_id>/remove")
 def remove_from_cart(product_id):
@@ -547,16 +605,14 @@ def update_cart_quantity(product_id):
     if not product:
         abort(404)
     if quantity > product[0]:
-        flash("Số lượng vượt quá tồn kho hiện có.", "error")
-        return redirect(url_for("cart_page"))
+        return _flash_redirect("cart_page", "Số lượng vượt quá tồn kho hiện có.", "error")
 
     cart = session.get("cart", {})
     if str(product_id) not in cart:
         abort(404)
     cart[str(product_id)] = quantity
     session["cart"] = cart
-    flash("Đã cập nhật số lượng sản phẩm.", "success")
-    return redirect(url_for("cart_page"))
+    return _flash_redirect("cart_page", "Đã cập nhật số lượng sản phẩm.")
 
 
 @app.route("/checkout", methods=["GET", "POST"])
@@ -570,8 +626,7 @@ def checkout():
 
     cart = session.get("cart", {})
     if not cart:
-        flash("Giỏ hàng của bạn đang trống.", "error")
-        return redirect(url_for("cart_page"))
+        return _flash_redirect("cart_page", "Giỏ hàng của bạn đang trống.", "error")
 
     product_ids = [int(product_id) for product_id in cart]
     placeholders = ", ".join("?" for _ in product_ids)
@@ -600,25 +655,14 @@ def checkout():
             )
             items.append(product)
         if len(items) != len(cart):
-            flash("Một số sản phẩm trong giỏ không còn khả dụng.", "error")
-            return redirect(url_for("cart_page"))
+            return _flash_redirect("cart_page", "Một số sản phẩm trong giỏ không còn khả dụng.", "error")
         if any(item["quantity"] > item["stock_quantity"] for item in items):
-            flash("Tồn kho không đủ cho số lượng đã chọn. Vui lòng cập nhật giỏ hàng.", "error")
-            return redirect(url_for("cart_page"))
-        return render_template(
+            return _flash_redirect("cart_page", "Tồn kho không đủ cho số lượng đã chọn. Vui lòng cập nhật giỏ hàng.", "error")
+        return _render(
             "cart/checkout.html",
-            store_name="Apple Store",
             items=items,
             total=sum((item["line_total"] for item in items), 0),
-            payment_choices={
-                "cod": "Thanh toán khi nhận hàng",
-                "bank_transfer": "Chuyển khoản ngân hàng",
-                "credit_card": "Thẻ tín dụng quốc tế (nhân viên hướng dẫn)",
-                "domestic_card": "Thẻ ATM nội địa (nhân viên hướng dẫn)",
-                "momo": "Ví MoMo (nhân viên hướng dẫn)",
-                "credit_installment": "Trả góp qua thẻ tín dụng",
-                "momo_installment": "Trả góp qua MoMo",
-            },
+            payment_choices=PAYMENT_METHOD_LABELS.copy(),
         )
 
     full_name = request.form.get("full_name", "").strip()
@@ -626,26 +670,10 @@ def checkout():
     shipping_address = request.form.get("shipping_address", "").strip()
     customer_note = request.form.get("note", "").strip()
     payment_choice = request.form.get("payment_method", "")
-    payment_method_labels = {
-        "cod": "Thanh toán khi nhận hàng",
-        "bank_transfer": "Chuyển khoản ngân hàng",
-        "credit_card": "Thẻ tín dụng quốc tế (nhân viên hướng dẫn)",
-        "domestic_card": "Thẻ ATM nội địa (nhân viên hướng dẫn)",
-        "momo": "Ví MoMo (nhân viên hướng dẫn)",
-    }
-    payment_method = payment_method_labels.get(payment_choice)
     installment_months = request.form.get("installment_months", "")
-    allowed_installments = {
-        "credit_installment": {"3", "6", "9", "12"},
-        "momo_installment": {"6", "12", "18", "24"},
-    }
-    if payment_choice in allowed_installments:
-        if installment_months not in allowed_installments[payment_choice]:
-            abort(400, description="Kỳ hạn trả góp không hợp lệ.")
-        provider = "thẻ tín dụng" if payment_choice == "credit_installment" else "MoMo"
-        payment_method = f"Trả góp {provider} - {installment_months} tháng"
-    elif payment_choice not in payment_method_labels:
-        abort(400, description="Phương thức thanh toán không hợp lệ.")
+    payment_method, payment_error = _resolve_payment_method(payment_choice, installment_months)
+    if payment_error:
+        abort(400, description=payment_error)
 
     trade_in_requested = request.form.get("trade_in_requested") == "on"
     trade_in_device = request.form.get("trade_in_device", "").strip()
@@ -795,13 +823,11 @@ def checkout():
     session.pop("cart", None)
     session.pop("cart_engraving", None)
     receipt_token = order_receipt_serializer.dumps({"order_id": order_id})
-    flash("Đặt hàng thành công! Hóa đơn của bạn đã sẵn sàng để in.", "success")
-    return redirect(
-        url_for(
-            "order_confirmation",
-            order_id=order_id,
-            receipt_token=receipt_token,
-        )
+    return _flash_redirect(
+        "order_confirmation",
+        "Đặt hàng thành công! Hóa đơn của bạn đã sẵn sàng để in.",
+        order_id=order_id,
+        receipt_token=receipt_token,
     )
 
 
@@ -846,9 +872,8 @@ def order_confirmation(order_id, receipt_token):
     finally:
         conn.close()
 
-    return render_template(
+    return _render(
         "orders/confirmation.html",
-        store_name="Apple Store",
         order=order_rows[0],
         items=items,
         home_url=url_for("home"),
@@ -875,33 +900,19 @@ def login():
         finally:
             conn.close()
 
-        if (
-            user
-            and user[3] in (1, 2, 3)
-            and user[4]
-            and check_password_hash(user[2], password)
-        ):
-            session.pop("csrf_token", None)
-            session.pop("admin_user_id", None)
-            session.pop("sales_staff_id", None)
-            session.pop("customer_user_id", None)
+        if user and user[3] in (1, 2, 3) and user[4] and check_password_hash(user[2], password):
+            _clear_auth_session()
             session.permanent = False
+
             next_url = request.args.get("next", "")
-            parsed_next_url = urlsplit(next_url)
-            safe_next_url = (
-                next_url.startswith("/")
-                and not next_url.startswith("//")
-                and "\\" not in next_url
-                and not parsed_next_url.netloc
-                and not parsed_next_url.scheme
-            )
+            safe_next_url = _is_safe_local_redirect(next_url)
+
             if user[3] == 3:
                 session["customer_user_id"] = user[0]
                 flash("Đăng nhập thành công. Bạn có thể tiếp tục mua sắm.", "success")
                 session.pop("login_next", None)
                 if safe_next_url and (
-                    next_url == url_for("cart_page")
-                    or next_url == url_for("checkout")
+                    next_url in {url_for("cart_page"), url_for("checkout")}
                     or re.fullmatch(r"/products/\d+", next_url)
                 ):
                     return redirect(next_url)
@@ -909,9 +920,7 @@ def login():
 
             session["admin_user_id" if user[3] == 1 else "sales_staff_id"] = user[0]
             if user[3] == 2:
-                if safe_next_url and (
-                    next_url == "/staff" or next_url.startswith("/staff/")
-                ):
+                if safe_next_url and (next_url == "/staff" or next_url.startswith("/staff/")):
                     return redirect(next_url)
                 return redirect(url_for("sales.dashboard"))
             if safe_next_url:
@@ -923,11 +932,7 @@ def login():
             "error",
         )
 
-    return render_template(
-        "auth/login.html",
-        store_name="Apple Store",
-        csrf_token=session.get("csrf_token", ""),
-    )
+    return _form("auth/login.html")
 
 @app.route("/forgot-password", methods=["GET", "POST"])
 @app.route("/forgot_password", methods=["GET", "POST"])
@@ -945,11 +950,7 @@ def forgot_password():
             or password != confirm_password
         ):
             flash("Vui lòng kiểm tra lại thông tin đặt lại mật khẩu.", "error")
-            return render_template(
-                "auth/forgot_password.html",
-                store_name="Apple Store",
-                csrf_token=session.get("csrf_token", ""),
-            )
+            return _form("auth/forgot_password.html")
 
         conn = get_connection()
         try:
@@ -965,11 +966,7 @@ def forgot_password():
             user = cursor.fetchone()
             if not user or not check_password_hash(user[1], old_password):
                 flash("Tên đăng nhập hoặc mật khẩu cũ không đúng.", "error")
-                return render_template(
-                    "auth/forgot_password.html",
-                    store_name="Apple Store",
-                    csrf_token=session.get("csrf_token", ""),
-                )
+                return _form("auth/forgot_password.html")
 
             cursor.execute(
                 """--sql
@@ -988,25 +985,15 @@ def forgot_password():
         finally:
             conn.close()
 
-        flash("Mật khẩu của bạn đã được đặt lại thành công. Vui lòng đăng nhập lại.", "success")
-        return redirect(url_for("login"))
+        return _flash_redirect("login", "Mật khẩu của bạn đã được đặt lại thành công. Vui lòng đăng nhập lại.")
 
-    return render_template(
-        "auth/forgot_password.html",
-        store_name="Apple Store",
-        csrf_token=session.get("csrf_token", ""),
-    )
+    return _form("auth/forgot_password.html")
 
 
 @app.post("/logout")
 def logout():
-    session.pop("admin_user_id", None)
-    session.pop("sales_staff_id", None)
-    session.pop("customer_user_id", None)
-    session.pop("login_next", None)
-    session.pop("csrf_token", None)
-    flash("Bạn đã đăng xuất.", "success")
-    return redirect(url_for("login"))
+    _clear_auth_session()
+    return _flash_redirect("login", "Bạn đã đăng xuất.")
 
 
 def _load_customer_profile():
@@ -1047,21 +1034,15 @@ def _load_customer_profile():
 def customer_account():
     customer = _load_customer_profile()
     if not customer:
-        flash("Vui lòng đăng nhập để xem thông tin tài khoản.", "error")
-        return redirect(url_for("login"))
+        return _customer_required("Vui lòng đăng nhập để xem thông tin tài khoản.")
 
-    return render_template(
-        "account/profile.html",
-        store_name="Apple Store",
-        customer=customer,
-    )
+    return _render("account/profile.html", customer=customer)
 
 
 @app.get("/account/orders")
 def customer_orders():
-    customer_id = session.get("customer_user_id")
+    customer_id = _customer_id_required("Vui lòng đăng nhập để theo dõi đơn hàng.")
     if customer_id is None:
-        flash("Vui lòng đăng nhập để theo dõi đơn hàng.", "error")
         return redirect(url_for("login"))
 
     conn = get_connection()
@@ -1115,33 +1096,23 @@ def customer_orders():
                 }
             )
 
-    return render_template(
-        "account/orders.html",
-        store_name="Apple Store",
-        orders=list(orders_by_id.values()),
-    )
+    return _render("account/orders.html", orders=list(orders_by_id.values()))
 
 
 @app.get("/account/notifications")
 def customer_notifications():
-    customer_id = session.get("customer_user_id")
+    customer_id = _customer_id_required("Vui lòng đăng nhập để xem thông báo.")
     if customer_id is None:
-        flash("Vui lòng đăng nhập để xem thông báo.", "error")
         return redirect(url_for("login"))
 
     notifications = get_customer_notifications(customer_id)
-    return render_template(
-        "account/notifications.html",
-        store_name="Apple Store",
-        notifications=notifications,
-    )
+    return _render("account/notifications.html", notifications=notifications)
 
 
 @app.post("/account/notifications/read")
 def mark_notifications_read():
-    customer_id = session.get("customer_user_id")
+    customer_id = _customer_id_required("Vui lòng đăng nhập để cập nhật thông báo.")
     if customer_id is None:
-        flash("Vui lòng đăng nhập để cập nhật thông báo.", "error")
         return redirect(url_for("login"))
 
     mark_customer_notifications_read(customer_id)
@@ -1150,23 +1121,20 @@ def mark_notifications_read():
 
 @app.post("/account/notifications/<int:notification_id>/delete")
 def delete_customer_notification(notification_id):
-    customer_id = session.get("customer_user_id")
+    customer_id = _customer_id_required("Vui lòng đăng nhập để xóa thông báo.")
     if customer_id is None:
-        flash("Vui lòng đăng nhập để xóa thông báo.", "error")
         return redirect(url_for("login"))
 
     if not delete_notification_record(customer_id, notification_id):
         abort(404)
-    flash("Thông báo đã được xóa.", "success")
-    return redirect(url_for("customer_notifications"))
+    return _flash_redirect("customer_notifications", "Thông báo đã được xóa.")
 
 
 @app.route("/account/edit", methods=["GET", "POST"])
 def edit_customer_account():
     customer = _load_customer_profile()
     if not customer:
-        flash("Vui lòng đăng nhập để chỉnh sửa tài khoản.", "error")
-        return redirect(url_for("login"))
+        return _customer_required("Vui lòng đăng nhập để chỉnh sửa tài khoản.")
 
     if request.method == "POST":
         full_name = request.form.get("full_name", "").strip()
@@ -1183,23 +1151,12 @@ def edit_customer_account():
         if (
             not full_name
             or len(full_name) > 100
-            or (phone and (
-                len(phone) > 15
-                or not re.fullmatch(r"[0-9+()\- ]+", phone)
-                or not 7 <= sum(character.isdigit() for character in phone) <= 15
-            ))
-            or (email and (
-                len(email) > 100
-                or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
-            ))
+            or (phone and not _validate_phone(phone))
+            or (email and not _validate_email(email))
             or (address and len(address) > 255)
         ):
             flash("Vui lòng kiểm tra lại thông tin cá nhân.", "error")
-            return render_template(
-                "account/edit.html",
-                store_name="Apple Store",
-                customer=customer,
-            )
+            return _render("account/edit.html", customer=customer)
 
         conn = get_connection()
         try:
@@ -1214,11 +1171,7 @@ def edit_customer_account():
                 )
                 if cursor.fetchone():
                     flash("Email này đã được sử dụng bởi tài khoản khác.", "error")
-                    return render_template(
-                        "account/edit.html",
-                        store_name="Apple Store",
-                        customer=customer,
-                    )
+                    return _render("account/edit.html", customer=customer)
 
             cursor.execute(
                 """--sql
@@ -1243,14 +1196,9 @@ def edit_customer_account():
         finally:
             conn.close()
 
-        flash("Thông tin cá nhân đã được cập nhật.", "success")
-        return redirect(url_for("customer_account"))
+        return _flash_redirect("customer_account", "Thông tin cá nhân đã được cập nhật.")
 
-    return render_template(
-        "account/edit.html",
-        store_name="Apple Store",
-        customer=customer,
-    )
+    return _render("account/edit.html", customer=customer)
 
 
 @app.cli.command("create-admin")
@@ -1307,25 +1255,14 @@ def register():
             or len(full_name) > 100
             or not username
             or len(username) > 50
-            or (phone and (
-                len(phone) > 15
-                or not re.fullmatch(r"[0-9+()\- ]+", phone)
-                or not 7 <= sum(character.isdigit() for character in phone) <= 15
-            ))
-            or (email and (
-                len(email) > 100
-                or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
-            ))
+            or (phone and not _validate_phone(phone))
+            or (email and not _validate_email(email))
             or (address and len(address) > 255)
             or len(password) < 8
             or password != confirm_password
         ):
             flash("Vui lòng kiểm tra lại thông tin đăng ký.", "error")
-            return render_template(
-                "auth/register.html",
-                store_name="Apple Store",
-                csrf_token=session.get("csrf_token", ""),
-            )
+            return _form("auth/register.html")
 
         conn = get_connection()
         try:
@@ -1345,11 +1282,7 @@ def register():
                 )
             if cursor.fetchone():
                 flash("Tên đăng nhập hoặc email đã được sử dụng.", "error")
-                return render_template(
-                    "auth/register.html",
-                    store_name="Apple Store",
-                    csrf_token=session.get("csrf_token", ""),
-                )
+                return _form("auth/register.html")
 
             cursor.execute(
                 """--sql
@@ -1375,14 +1308,9 @@ def register():
         finally:
             conn.close()
 
-        flash("Đăng ký thành công. Vui lòng đăng nhập để tiếp tục.", "success")
-        return redirect(url_for("login"))
+        return _flash_redirect("login", "Đăng ký thành công. Vui lòng đăng nhập để tiếp tục.")
 
-    return render_template(
-        "auth/register.html",
-        store_name="Apple Store",
-        csrf_token=session.get("csrf_token", ""),
-    )
+    return _form("auth/register.html")
 
 
 if __name__ == "__main__":

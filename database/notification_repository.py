@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from database.connection import get_connection
 from database.utils import rows_to_dicts
 
@@ -16,6 +18,20 @@ def create_order_notification(
     )
 
 
+def _readable_notifications(notifications):
+    for notification in notifications:
+        value = notification.get("created_at")
+        if not isinstance(value, str):
+            continue
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+            try:
+                notification["created_at"] = datetime.strptime(value, fmt)
+                break
+            except ValueError:
+                pass
+    return notifications
+
+
 def get_unread_notification_count(user_id):
     conn = get_connection()
     try:
@@ -28,8 +44,7 @@ def get_unread_notification_count(user_id):
             """,
             (user_id,),
         )
-        row = cursor.fetchone()
-        return row[0]
+        return cursor.fetchone()[0]
     finally:
         conn.close()
 
@@ -48,10 +63,9 @@ def get_customer_notifications(user_id):
             """,
             (user_id,),
         )
-        notifications = rows_to_dicts(cursor)
+        return _readable_notifications(rows_to_dicts(cursor))
     finally:
         conn.close()
-    return notifications
 
 
 def mark_customer_notifications_read(user_id):

@@ -2,7 +2,19 @@
 {% block admin_content %}
 <div class="page-heading"><div><p class="eyebrow">QUẢN LÝ TÀI KHOẢN</p><h1>{{ title }}</h1><p class="page-subtitle">Tạo tài khoản, cập nhật thông tin và phân quyền truy cập.</p></div><a class="button button-dark" href="{{ url_for('admin.new_user') }}">＋ Thêm người dùng</a></div>
 <section class="panel">
-  <div class="panel-heading"><div><h2>Danh sách tài khoản</h2><p>{{ users|length }} tài khoản</p></div><form class="inline-search" method="get"><input type="search" name="q" value="{{ search }}" placeholder="Tên hoặc tên đăng nhập" aria-label="Tìm người dùng"><button class="button button-light" type="submit">Tìm</button></form></div>
+  <div class="panel-heading">
+    <div><h2>Danh sách tài khoản</h2><p>{{ users|length }} tài khoản</p></div>
+    <form class="inline-search" method="get">
+      <input type="search" name="q" value="{{ search }}" placeholder="Tên hoặc tên đăng nhập" aria-label="Tìm người dùng">
+      <select name="role" aria-label="Lọc theo vai trò">
+        <option value="all" {% if role_filter == "all" %}selected{% endif %}>Tất cả vai trò</option>
+        <option value="1" {% if role_filter == "1" %}selected{% endif %}>Quản trị viên</option>
+        <option value="2" {% if role_filter == "2" %}selected{% endif %}>Nhân viên</option>
+        <option value="3" {% if role_filter == "3" %}selected{% endif %}>Khách hàng</option>
+      </select>
+      <button class="button button-light" type="submit">Lọc</button>
+    </form>
+  </div>
   {% if users %}
   <div class="table-wrap"><table><thead><tr><th>Người dùng</th><th>Tên đăng nhập</th><th>Liên hệ</th><th>Vai trò</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
   {% for user in users %}

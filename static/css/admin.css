@@ -693,7 +693,8 @@ td > strong {
   white-space: nowrap;
 }
 
-.inline-search input {
+.inline-search input,
+.inline-search select {
   width: 190px;
   height: 34px;
   padding: 0 10px;
@@ -701,6 +702,11 @@ td > strong {
   border-radius: 7px;
   outline-color: #9bb9e7;
   font-size: 11px;
+}
+.inline-search select {
+  width: auto;
+  min-width: 130px;
+  background: #fff;
 }
 
 .status-form select {

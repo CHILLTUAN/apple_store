@@ -34,6 +34,20 @@ def _notify_order_completed(cursor, user_id, order_id):
     )
 
 
+def _notify_status_transition(cursor, user_id, order_id, status):
+    if status == "Đã giao":
+        _notify_order_completed(cursor, user_id, order_id)
+    elif status == "Đang chuẩn bị":
+        create_order_notification(
+            cursor,
+            user_id,
+            order_id,
+            "order_approved",
+            "Đơn hàng đã được duyệt",
+            f"Đơn hàng #{order_id} đã được duyệt và đang được chuẩn bị.",
+        )
+
+
 def update_order_status(cursor, order_id, new_status):
     cursor.execute(
         "SELECT product_id FROM OrderDetails WHERE order_id = ? ORDER BY product_id;",
@@ -142,31 +156,11 @@ def update_order_status(cursor, order_id, new_status):
             """,
             (new_status, order_id),
         )
-        if new_status == "Đã giao":
-            _notify_order_completed(cursor, user_id, order_id)
-        elif new_status == "Đang chuẩn bị":
-            create_order_notification(
-                cursor,
-                user_id,
-                order_id,
-                "order_approved",
-                "Đơn hàng đã được duyệt",
-                f"Đơn hàng #{order_id} đã được duyệt và đang được chuẩn bị.",
-            )
+        _notify_status_transition(cursor, user_id, order_id, new_status)
         return
 
     cursor.execute(
         "UPDATE Orders SET order_status = ? WHERE order_id = ?;",
         (new_status, order_id),
     )
-    if new_status == "Đã giao":
-        _notify_order_completed(cursor, user_id, order_id)
-    if new_status == "Đang chuẩn bị":
-        create_order_notification(
-            cursor,
-            user_id,
-            order_id,
-            "order_approved",
-            "Đơn hàng đã được duyệt",
-            f"Đơn hàng #{order_id} đã được duyệt và đang được chuẩn bị.",
-        )
+    _notify_status_transition(cursor, user_id, order_id, new_status)

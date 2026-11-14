@@ -82,6 +82,10 @@ def provide_sales_csrf_token():
     return {"csrf_token": session.get("csrf_token", "")}
 
 
+def _render_sales(template_name, **context):
+    return render_template(f"staff/{template_name}", **context)
+
+
 def _date_range(default_to_today=False):
     start_text = request.args.get("from_date", "").strip()
     end_text = request.args.get("to_date", "").strip()
@@ -140,8 +144,8 @@ def dashboard():
     finally:
         conn.close()
 
-    return render_template(
-        "staff/dashboard.html",
+    return _render_sales(
+        "dashboard.html",
         title="Tổng quan bán hàng",
         stats=stats,
         recent_orders=recent_orders,
@@ -179,8 +183,8 @@ def orders():
         order_rows = rows_to_dicts(cursor)
     finally:
         conn.close()
-    return render_template(
-        "staff/orders.html",
+    return _render_sales(
+        "orders.html",
         title="Đơn hàng",
         orders=order_rows,
         statuses=ORDER_STATUSES,
@@ -225,8 +229,8 @@ def order_invoice(order_id):
         items = rows_to_dicts(cursor)
     finally:
         conn.close()
-    return render_template(
-        "staff/invoice.html",
+    return _render_sales(
+        "invoice.html",
         title=f"Hóa đơn #{order_id}",
         order=order_rows[0],
         items=items,
@@ -268,8 +272,8 @@ def update_status(order_id):
 @sales_bp.route("/products")
 def products():
     search = request.args.get("q", "").strip()
-    return render_template(
-        "staff/products.html",
+    return _render_sales(
+        "products.html",
         title="Sản phẩm",
         products=get_admin_products(search, include_all=True),
         search=search,
@@ -279,8 +283,8 @@ def products():
 
 @sales_bp.route("/categories")
 def categories():
-    return render_template(
-        "staff/categories.html",
+    return _render_sales(
+        "categories.html",
         title="Danh mục",
         category_rows=_categories(),
         active_nav="categories",
@@ -361,8 +365,8 @@ def edit_category(category_id=None):
             finally:
                 conn.close()
 
-    return render_template(
-        "staff/category_form.html",
+    return _render_sales(
+        "category_form.html",
         title="Thêm danh mục" if category_id is None else "Chỉnh sửa danh mục",
         category=category,
         active_nav="categories",
@@ -409,8 +413,8 @@ def new_product():
             flash("Đã thêm sản phẩm.", "success")
             return redirect(url_for("sales.products"))
 
-    return render_template(
-        "staff/product_form.html",
+    return _render_sales(
+        "product_form.html",
         title="Thêm sản phẩm",
         product=None,
         categories=_product_categories(),
@@ -480,8 +484,8 @@ def edit_product(product_id):
             flash("Đã cập nhật sản phẩm.", "success")
             return redirect(url_for("sales.products"))
 
-    return render_template(
-        "staff/product_form.html",
+    return _render_sales(
+        "product_form.html",
         title="Chỉnh sửa sản phẩm",
         product=product,
         categories=_product_categories(),
@@ -607,8 +611,8 @@ def reports():
         )
     finally:
         conn.close()
-    return render_template(
-        "staff/reports.html",
+    return _render_sales(
+        "reports.html",
         title="Báo cáo bán hàng",
         totals=totals,
         product_sales=product_sales,
@@ -660,8 +664,8 @@ def settings():
         flash("Đã cập nhật số sản phẩm hiển thị trên trang chủ.", "success")
         return redirect(url_for("sales.settings"))
 
-    return render_template(
-        "staff/settings.html",
+    return _render_sales(
+        "settings.html",
         title="Cài đặt hệ thống",
         homepage_products_per_category=get_home_product_limit(),
         max_home_products_per_category=MAX_HOME_PRODUCTS_PER_CATEGORY,

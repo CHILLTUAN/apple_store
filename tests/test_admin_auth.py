@@ -289,6 +289,38 @@ class AdminAuthenticationTests(unittest.TestCase):
         self.assertIn(b"Th\xc3\xaam ng\xc6\xb0\xe1\xbb\x9di d\xc3\xb9ng", response.data)
         self.assertIn(b"Ph\xc3\xa2n quy\xe1\xbb\x81n", response.data)
         self.assertIn(b"X\xc3\xb3a", response.data)
+        self.assertIn("Tất cả vai trò".encode(), response.data)
+        self.assertIn("Khách hàng".encode(), response.data)
+
+    def test_user_management_filters_by_role(self):
+        self._login_admin()
+        with patch.object(
+            admin_routes, "get_connection", side_effect=UserActionConnection
+        ):
+            response = self.client.get("/admin/users?role=2")
+
+        self.assertEqual(response.status_code, 200)
+        users_query = next(
+            (query, params)
+            for query, params in UserActionCursor.executions
+            if "FROM Users" in query and "ORDER BY created_at DESC" in query
+        )
+        self.assertIn("role = ?", users_query[0])
+        self.assertEqual(users_query[1][:2], (1, 2))
+        self.assertIn(
+            '<option value="2" selected>Nhân viên</option>'.encode(),
+            response.data,
+        )
+
+    def test_customers_admin_page_is_removed(self):
+        response = self.client.get("/admin/customers")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_vouchers_admin_page_is_removed(self):
+        response = self.client.get("/admin/vouchers")
+
+        self.assertEqual(response.status_code, 404)
 
     def test_admin_can_add_user_with_valid_details(self):
         self._login_admin()

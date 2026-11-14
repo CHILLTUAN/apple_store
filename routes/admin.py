@@ -81,6 +81,10 @@ def provide_csrf_token():
     return {"csrf_token": session.get("csrf_token", "")}
 
 
+def _render_admin(template_name, **context):
+    return render_template(f"admin/{template_name}", **context)
+
+
 def _categories(active_only=False):
     conn = get_connection()
     try:
@@ -198,8 +202,8 @@ def dashboard():
     finally:
         conn.close()
 
-    return render_template(
-        "admin/dashboard.html",
+    return _render_admin(
+        "dashboard.html",
         title="Tổng quan",
         stats=stats,
         product_count=len(products),
@@ -214,8 +218,8 @@ def dashboard():
 def products():
     search = request.args.get("q", "").strip()
     product_rows = get_admin_products(search, include_all=True)
-    return render_template(
-        "admin/products.html",
+    return _render_admin(
+        "products.html",
         title="Sản phẩm",
         products=product_rows,
         product_count=len(product_rows),
@@ -259,8 +263,8 @@ def new_product():
             flash("Đã thêm sản phẩm.", "success")
             return redirect(url_for("admin.products"))
 
-    return render_template(
-        "admin/product_form.html",
+    return _render_admin(
+        "product_form.html",
         title="Thêm sản phẩm",
         product=None,
         categories=_product_categories(),
@@ -323,8 +327,8 @@ def edit_product(product_id):
             flash("Đã cập nhật sản phẩm.", "success")
             return redirect(url_for("admin.products"))
 
-    return render_template(
-        "admin/product_form.html",
+    return _render_admin(
+        "product_form.html",
         title="Chỉnh sửa sản phẩm",
         product=product,
         categories=_product_categories(),
@@ -407,8 +411,8 @@ def set_product_visibility(product_id):
 
 @admin_bp.route("/categories")
 def categories():
-    return render_template(
-        "admin/categories.html",
+    return _render_admin(
+        "categories.html",
         title="Danh mục",
         category_rows=_categories(),
         active_nav="categories",
@@ -478,8 +482,8 @@ def edit_category(category_id=None):
             finally:
                 conn.close()
 
-    return render_template(
-        "admin/category_form.html",
+    return _render_admin(
+        "category_form.html",
         title="Thêm danh mục" if category_id is None else "Chỉnh sửa danh mục",
         category=category,
         active_nav="categories",
@@ -508,8 +512,8 @@ def orders():
         order_rows = rows_to_dicts(cursor)
     finally:
         conn.close()
-    return render_template(
-        "admin/orders.html",
+    return _render_admin(
+        "orders.html",
         title="Đơn hàng",
         orders=order_rows,
         statuses=ORDER_STATUSES,
@@ -553,8 +557,8 @@ def order_invoice(order_id):
         items = rows_to_dicts(cursor)
     finally:
         conn.close()
-    return render_template(
-        "admin/invoice.html",
+    return _render_admin(
+        "invoice.html",
         title=f"Hóa đơn #{order_id}",
         order=order_rows[0],
         items=items,
@@ -591,17 +595,22 @@ def update_order_status(order_id):
     return redirect(url_for("admin.orders"))
 
 
-@admin_bp.route("/customers")
-def customers():
-    return _render_users(role=3, title="Khách hàng", active_nav="customers")
-
-
 @admin_bp.route("/users")
 def users():
-    return _render_users(role=None, title="Người dùng", active_nav="users")
+    role_filter = request.args.get("role", "all")
+    role_values = {"all": None, "1": 1, "2": 2, "3": 3}
+    if role_filter not in role_values:
+        abort(400, description="Vai trò người dùng không hợp lệ.")
+
+    return _render_users(
+        role=role_values[role_filter],
+        title="Người dùng",
+        active_nav="users",
+        role_filter=role_filter,
+    )
 
 
-def _render_users(role, title, active_nav):
+def _render_users(role, title, active_nav, role_filter="all"):
     search = request.args.get("q", "").strip()
     conn = get_connection()
     try:
@@ -620,11 +629,12 @@ def _render_users(role, title, active_nav):
         user_rows = rows_to_dicts(cursor)
     finally:
         conn.close()
-    return render_template(
-        "admin/users.html",
+    return _render_admin(
+        "users.html",
         title=title,
         users=user_rows,
         search=search,
+        role_filter=role_filter,
         active_nav=active_nav,
     )
 
@@ -731,8 +741,8 @@ def new_user():
                     raise
                 finally:
                     conn.close()
-    return render_template(
-        "admin/user_form.html",
+    return _render_admin(
+        "user_form.html",
         title="Thêm người dùng",
         user=None,
         form_values=form_values,
@@ -960,8 +970,8 @@ def delete_user(user_id):
 
 
 def _render_user_form(user):
-    return render_template(
-        "admin/user_form.html",
+    return _render_admin(
+        "user_form.html",
         title="Chỉnh sửa người dùng",
         user=user,
         active_nav="users",
@@ -969,8 +979,8 @@ def _render_user_form(user):
 
 
 def _render_user_role_form(user):
-    return render_template(
-        "admin/user_role_form.html",
+    return _render_admin(
+        "user_role_form.html",
         title="Phân quyền người dùng",
         user={
             "user_id": user[0],
@@ -1032,21 +1042,11 @@ def revenue():
         )
     finally:
         conn.close()
-    return render_template(
-        "admin/revenue.html",
+    return _render_admin(
+        "revenue.html",
         title="Doanh thu",
         monthly_sales=monthly_sales,
         product_sales=product_sales,
         best_sellers=best_sellers,
         active_nav="revenue",
-    )
-
-
-@admin_bp.route("/vouchers")
-def vouchers():
-    return render_template(
-        "admin/placeholder.html",
-        title="Mã giảm giá",
-        description="Cơ sở dữ liệu hiện chưa có bảng mã giảm giá. Hãy bổ sung quy tắc voucher trước khi bật quản lý mã giảm giá.",
-        active_nav="vouchers",
     )
