@@ -47,6 +47,15 @@ class CheckoutCursor:
         elif "SELECT user_id, full_name, password_hash, role, is_active" in query:
             if params[0] == "CUSTOMER":
                 self.row = CUSTOMER
+        elif "SELECT user_id, full_name, phone, email, address, username" in query:
+            self.row = (
+                CUSTOMER[0],
+                "Test Customer",
+                "0912345678",
+                "test@example.com",
+                "Test address",
+                "CUSTOMER",
+            )
         elif "UPDATE Users" in query:
             self.rowcount = 1
         elif "INSERT INTO Orders" in query:
@@ -151,8 +160,6 @@ class CustomerCheckoutTests(unittest.TestCase):
             "/checkout",
             data={
                 "csrf_token": "checkout-test-token",
-                "full_name": "Test Customer",
-                "phone": "0912345678",
                 "shipping_address": "Test address",
                 "payment_method": "momo_installment",
                 "installment_months": "24",
@@ -188,7 +195,7 @@ class CustomerCheckoutTests(unittest.TestCase):
         )
         self.assertEqual(
             customer_update,
-            ("Test Customer", "0912345678", "Test address", CUSTOMER[0]),
+            ("Test address", CUSTOMER[0]),
         )
 
         detail_insert = next(

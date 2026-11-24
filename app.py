@@ -658,15 +658,17 @@ def checkout():
             return _flash_redirect("cart_page", "Một số sản phẩm trong giỏ không còn khả dụng.", "error")
         if any(item["quantity"] > item["stock_quantity"] for item in items):
             return _flash_redirect("cart_page", "Tồn kho không đủ cho số lượng đã chọn. Vui lòng cập nhật giỏ hàng.", "error")
+        customer = _load_customer_profile()
+        if customer is None:
+            return _flash_redirect("login", "Vui lòng đăng nhập lại.", "error")
         return _render(
             "cart/checkout.html",
             items=items,
             total=sum((item["line_total"] for item in items), 0),
             payment_choices=PAYMENT_METHOD_LABELS.copy(),
+            customer=customer,
         )
 
-    full_name = request.form.get("full_name", "").strip()
-    phone = request.form.get("phone", "").strip()
     shipping_address = request.form.get("shipping_address", "").strip()
     customer_note = request.form.get("note", "").strip()
     payment_choice = request.form.get("payment_method", "")
@@ -680,13 +682,7 @@ def checkout():
     consultation_requested = request.form.get("consultation_requested") == "on"
     consultation_message = request.form.get("consultation_message", "").strip()
     if (
-        not full_name
-        or len(full_name) > 100
-        or not phone
-        or len(phone) > 15
-        or not re.fullmatch(r"[0-9+()\- ]+", phone)
-        or not 7 <= sum(character.isdigit() for character in phone) <= 15
-        or not shipping_address
+        not shipping_address
         or len(shipping_address) > 255
         or len(customer_note) > 255
         or (trade_in_requested and not trade_in_device)
@@ -758,12 +754,10 @@ def checkout():
         cursor.execute(
             """--sql
             UPDATE Users
-            SET full_name = ?, phone = ?, address = ?
+            SET address = ?
             WHERE user_id = ? AND role = 3 AND is_active = 1;
             """,
             (
-                full_name,
-                phone,
                 shipping_address,
                 session["customer_user_id"],
             ),
