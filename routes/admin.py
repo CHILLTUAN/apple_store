@@ -1,10 +1,13 @@
 import hmac
 import re
 import secrets
+import os
+import uuid
 from decimal import Decimal, InvalidOperation
 
 import pyodbc
-from flask import Blueprint, abort, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, session, url_for
+from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash
 
 from database.connection import get_connection
@@ -126,6 +129,25 @@ def _save_product_image(cursor, product_id, image_url):
         )
 
 
+ALLOWED_PRODUCT_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif"}
+
+
+def _save_uploaded_product_image(upload):
+    if not upload or not upload.filename:
+        return None
+
+    filename = secure_filename(upload.filename)
+    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if extension not in ALLOWED_PRODUCT_IMAGE_EXTENSIONS:
+        raise ValueError("Ảnh sản phẩm phải có định dạng PNG, JPG, JPEG, WEBP hoặc GIF.")
+
+    unique_name = f"{uuid.uuid4().hex}.{extension}"
+    upload_dir = os.path.join(current_app.static_folder, "uploads", "products")
+    os.makedirs(upload_dir, exist_ok=True)
+    upload.save(os.path.join(upload_dir, unique_name))
+    return f"uploads/products/{unique_name}"
+
+
 def _product_form_data(form):
     try:
         category_id = int(form.get("category_id", ""))
@@ -238,6 +260,9 @@ def new_product():
                 raise ValueError("Vui lòng nhập tên sản phẩm.")
             if not any(category["category_id"] == data[0] for category in _product_categories()):
                 raise ValueError("Danh mục đã chọn không tồn tại hoặc đang bị ẩn.")
+            uploaded_image = _save_uploaded_product_image(request.files.get("image_file"))
+            if uploaded_image:
+                data = (*data[:9], uploaded_image)
         except ValueError as error:
             flash(str(error), "error")
         else:
@@ -305,6 +330,9 @@ def edit_product(product_id):
                 raise ValueError("Vui lòng nhập tên sản phẩm.")
             if not any(category["category_id"] == data[0] for category in _product_categories()):
                 raise ValueError("Danh mục đã chọn không tồn tại hoặc đang bị ẩn.")
+            uploaded_image = _save_uploaded_product_image(request.files.get("image_file"))
+            if uploaded_image:
+                data = (*data[:9], uploaded_image)
         except ValueError as error:
             flash(str(error), "error")
         else:

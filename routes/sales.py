@@ -32,6 +32,7 @@ from routes.admin import (
     ORDER_STATUSES,
     _product_categories,
     _product_form_data,
+    _save_uploaded_product_image,
     _save_product_image,
 )
 
@@ -385,6 +386,9 @@ def new_product():
                 for category in _product_categories()
             ):
                 raise ValueError("Danh mục đã chọn không tồn tại hoặc đang bị ẩn.")
+            uploaded_image = _save_uploaded_product_image(request.files.get("image_file"))
+            if uploaded_image:
+                data = (*data[:9], uploaded_image)
         except ValueError as error:
             flash(str(error), "error")
         else:
@@ -458,6 +462,9 @@ def edit_product(product_id):
                 for category in _product_categories()
             ):
                 raise ValueError("Danh mục đã chọn không tồn tại hoặc đang bị ẩn.")
+            uploaded_image = _save_uploaded_product_image(request.files.get("image_file"))
+            if uploaded_image:
+                data = (*data[:9], uploaded_image)
         except ValueError as error:
             flash(str(error), "error")
         else:
