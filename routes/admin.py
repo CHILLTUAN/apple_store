@@ -142,10 +142,10 @@ def _save_uploaded_product_image(upload):
         raise ValueError("Ảnh sản phẩm phải có định dạng PNG, JPG, JPEG, WEBP hoặc GIF.")
 
     unique_name = f"{uuid.uuid4().hex}.{extension}"
-    upload_dir = os.path.join(current_app.static_folder, "uploads", "products")
+    upload_dir = os.path.join(current_app.static_folder, "images", "products")
     os.makedirs(upload_dir, exist_ok=True)
     upload.save(os.path.join(upload_dir, unique_name))
-    return f"uploads/products/{unique_name}"
+    return f"images/products/{unique_name}"
 
 
 def _product_form_data(form):
