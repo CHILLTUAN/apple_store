@@ -9,7 +9,7 @@
     <h1>{{ title }}</h1>
   </div>
 </div>
-<form class="panel form-panel narrow-panel" method="post">
+<form class="panel form-panel narrow-panel" method="post" enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <div class="form-grid">
     <label class="field field-wide">
@@ -22,8 +22,8 @@
       <small>Slug dùng cho địa chỉ danh mục, ví dụ: iphone.</small>
     </label>
     <label class="field field-wide">
-      Đường dẫn ảnh
-      <input name="image_url" maxlength="255" value="{{ category.image_url if category else '' }}">
+      Tải ảnh danh mục
+      <input type="file" name="image_file" accept="image/png,image/jpeg,image/webp,image/gif">
     </label>
     <label class="field field-wide">
       Trạng thái

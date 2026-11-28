@@ -27,7 +27,13 @@
             </span>
           </td>
           <td>
-            <a class="button button-small button-light" href="{{ url_for('sales.edit_category', category_id=category.category_id) }}">Sửa</a>
+            <div class="row-actions">
+              <a class="button button-small button-light" href="{{ url_for('sales.edit_category', category_id=category.category_id) }}">Sửa</a>
+              <form method="post" action="{{ url_for('sales.delete_category', category_id=category.category_id) }}" onsubmit="return confirm('Xóa danh mục này? Chỉ danh mục chưa có sản phẩm mới xóa được.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="button button-small button-danger" type="submit">Xóa</button>
+              </form>
+            </div>
           </td>
         </tr>
         {% endfor %}

@@ -32,7 +32,8 @@ from routes.admin import (
     ORDER_STATUSES,
     _product_categories,
     _product_form_data,
-    _save_uploaded_product_image,
+    _save_category,
+    _save_uploaded_image,
     _save_product_image,
 )
 
@@ -292,6 +293,41 @@ def categories():
     )
 
 
+@sales_bp.post("/categories/<int:category_id>/delete")
+def delete_category(category_id):
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """--sql
+            SELECT TOP 1 c.category_id, p.product_id
+            FROM Categories AS c WITH (UPDLOCK, HOLDLOCK)
+            LEFT JOIN Products AS p WITH (UPDLOCK, HOLDLOCK)
+                ON p.category_id = c.category_id
+            WHERE c.category_id = ?;
+            """,
+            (category_id,),
+        )
+        category = cursor.fetchone()
+        if not category:
+            abort(404)
+        if category[1]:
+            conn.rollback()
+            flash("Không thể xóa danh mục đang có sản phẩm.", "error")
+            return redirect(url_for("sales.categories"))
+
+        cursor.execute("DELETE FROM Categories WHERE category_id = ?;", (category_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+    flash("Đã xóa danh mục.", "success")
+    return redirect(url_for("sales.categories"))
+
+
 @sales_bp.route("/categories/new", methods=["GET", "POST"])
 @sales_bp.route("/categories/<int:category_id>/edit", methods=["GET", "POST"])
 def edit_category(category_id=None):
@@ -318,53 +354,26 @@ def edit_category(category_id=None):
     if request.method == "POST":
         name = request.form.get("category_name", "").strip()
         slug = request.form.get("slug", "").strip()
-        image_url = request.form.get("image_url", "").strip() or None
         is_active = 1 if request.form.get("is_active") == "1" else 0
         if not name or not slug:
             flash("Tên danh mục và slug không được để trống.", "error")
         else:
-            conn = get_connection()
             try:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """--sql
-                    SELECT category_id
-                    FROM Categories
-                    WHERE slug = ? AND category_id <> ?;
-                    """,
-                    (slug, category_id or 0),
+                saved = _save_category(
+                    category_id,
+                    category,
+                    name,
+                    slug,
+                    is_active,
+                    request.files.get("image_file"),
                 )
-                if cursor.fetchone():
-                    flash("Slug này đã được sử dụng.", "error")
-                else:
-                    if category_id is None:
-                        cursor.execute(
-                            """--sql
-                            INSERT INTO Categories (
-                                category_name, slug, image_url, is_active
-                            )
-                            VALUES (?, ?, ?, ?);
-                            """,
-                            (name, slug, image_url, is_active),
-                        )
-                    else:
-                        cursor.execute(
-                            """--sql
-                            UPDATE Categories
-                            SET category_name = ?, slug = ?, image_url = ?,
-                                is_active = ?
-                            WHERE category_id = ?;
-                            """,
-                            (name, slug, image_url, is_active, category_id),
-                        )
-                    conn.commit()
+            except ValueError as error:
+                flash(str(error), "error")
+            else:
+                if saved:
                     flash("Đã lưu danh mục.", "success")
                     return redirect(url_for("sales.categories"))
-            except Exception:
-                conn.rollback()
-                raise
-            finally:
-                conn.close()
+                flash("Slug này đã được sử dụng.", "error")
 
     return _render_sales(
         "category_form.html",
@@ -386,7 +395,9 @@ def new_product():
                 for category in _product_categories()
             ):
                 raise ValueError("Danh mục đã chọn không tồn tại hoặc đang bị ẩn.")
-            uploaded_image = _save_uploaded_product_image(request.files.get("image_file"))
+            uploaded_image = _save_uploaded_image(
+                request.files.get("image_file"), "products", "sản phẩm"
+            )
             if uploaded_image:
                 data = (*data[:9], uploaded_image)
         except ValueError as error:
@@ -462,7 +473,9 @@ def edit_product(product_id):
                 for category in _product_categories()
             ):
                 raise ValueError("Danh mục đã chọn không tồn tại hoặc đang bị ẩn.")
-            uploaded_image = _save_uploaded_product_image(request.files.get("image_file"))
+            uploaded_image = _save_uploaded_image(
+                request.files.get("image_file"), "products", "sản phẩm"
+            )
             if uploaded_image:
                 data = (*data[:9], uploaded_image)
         except ValueError as error:

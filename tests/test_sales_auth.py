@@ -1,10 +1,15 @@
 import unittest
 from datetime import datetime
+from io import BytesIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from werkzeug.security import generate_password_hash
 
 import app as store_app
+from routes import admin as admin_routes
 from routes import sales as sales_routes
 
 
@@ -15,6 +20,7 @@ class SalesCursor:
     executions = []
     listed_order_status = "Chờ duyệt"
     referenced_product = False
+    referenced_category = False
 
     def __init__(self):
         self.row = None
@@ -47,6 +53,8 @@ class SalesCursor:
             self.rows = [(3, "iPhone", "iphone", None, True)]
         elif "SELECT category_id\n                    FROM Categories" in query:
             self.row = None
+        elif "SELECT TOP 1 c.category_id, p.product_id" in query:
+            self.row = (3, 10 if self.referenced_category else None)
         elif "SELECT product_id FROM Products WITH" in query:
             self.row = (10,)
         elif "SELECT TOP 1 order_id" in query and "OrderDetails" in query:
@@ -191,6 +199,7 @@ class SalesAuthenticationTests(unittest.TestCase):
         SalesCursor.executions = []
         SalesCursor.listed_order_status = "Chờ duyệt"
         SalesCursor.referenced_product = False
+        SalesCursor.referenced_category = False
         store_app.app.config.update(TESTING=True, SECRET_KEY="sales-test-secret")
         self.client = store_app.app.test_client()
         self.categories_patch = patch.object(
@@ -202,12 +211,17 @@ class SalesAuthenticationTests(unittest.TestCase):
         self.sales_connection_patch = patch.object(
             sales_routes, "get_connection", side_effect=SalesConnection
         )
+        self.admin_connection_patch = patch.object(
+            admin_routes, "get_connection", side_effect=SalesConnection
+        )
         self.categories_patch.start()
         self.app_connection_patch.start()
         self.sales_connection_patch.start()
+        self.admin_connection_patch.start()
         self.addCleanup(self.categories_patch.stop)
         self.addCleanup(self.app_connection_patch.stop)
         self.addCleanup(self.sales_connection_patch.stop)
+        self.addCleanup(self.admin_connection_patch.stop)
 
     def _csrf_token(self):
         self.client.get("/login")
@@ -457,6 +471,29 @@ class SalesAuthenticationTests(unittest.TestCase):
             any("INSERT INTO Categories" in query for query, _ in SalesCursor.executions)
         )
 
+        deleted_category = self.client.post(
+            "/staff/categories/3/delete",
+            data={"csrf_token": "sales-test-token"},
+        )
+        self.assertEqual(deleted_category.status_code, 302)
+        self.assertTrue(
+            any("DELETE FROM Categories" in query for query, _ in SalesCursor.executions)
+        )
+
+        execution_start = len(SalesCursor.executions)
+        SalesCursor.referenced_category = True
+        blocked_category_delete = self.client.post(
+            "/staff/categories/3/delete",
+            data={"csrf_token": "sales-test-token"},
+        )
+        self.assertEqual(blocked_category_delete.status_code, 302)
+        self.assertFalse(
+            any(
+                "DELETE FROM Categories" in query
+                for query, _ in SalesCursor.executions[execution_start:]
+            )
+        )
+
         edit_category = self.client.post(
             "/staff/categories/3/edit",
             data={
@@ -514,6 +551,42 @@ class SalesAuthenticationTests(unittest.TestCase):
         self.assertEqual(blocked_delete.status_code, 302)
         blocked_delete_page = self.client.get(blocked_delete.headers["Location"])
         self.assertIn("Không thể xóa sản phẩm".encode(), blocked_delete_page.data)
+
+    def test_staff_category_upload_saves_file_and_database_path(self):
+        with self.client.session_transaction() as current_session:
+            current_session["sales_staff_id"] = STAFF[0]
+            current_session["csrf_token"] = "sales-test-token"
+
+        with TemporaryDirectory() as upload_root:
+            with patch.object(
+                admin_routes,
+                "current_app",
+                SimpleNamespace(static_folder=upload_root),
+            ):
+                response = self.client.post(
+                    "/staff/categories/new",
+                    data={
+                        "csrf_token": "sales-test-token",
+                        "category_name": "Mac",
+                        "slug": "mac",
+                        "is_active": "1",
+                        "image_file": (BytesIO(b"category image"), "mac image.PNG"),
+                    },
+                )
+
+            self.assertEqual(response.status_code, 302)
+            insert_params = next(
+                params
+                for query, params in SalesCursor.executions
+                if "INSERT INTO Categories" in query
+            )
+            image_url = insert_params[2]
+            self.assertTrue(image_url.startswith("images/categories/"))
+            self.assertTrue(image_url.endswith(".png"))
+            self.assertEqual(
+                (Path(upload_root) / image_url).read_bytes(),
+                b"category image",
+            )
 
     def test_reports_reject_reversed_date_ranges(self):
         with self.client.session_transaction() as current_session:
